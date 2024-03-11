@@ -1,0 +1,19 @@
+HTTP/2.0 400 Bad Request
+Content-Length: 208
+Access-Control-Allow-Origin: *
+Access-Control-Expose-Headers: X-RateLimit-Limit, X-RateLimit-Remaining
+Age: 0
+Content-Type: application/json
+Date: Sun, 10 Mar 2024 21:53:05 GMT
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+Via: https/1.1 api-umbrella (ApacheTrafficServer [cMsSf ])
+X-Api-Umbrella-Request-Id: ce59demoqkssuqvt6g70
+X-Cache: MISS
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-Ratelimit-Limit: 40
+X-Ratelimit-Remaining: 37
+X-Vcap-Request-Id: ab8d26db-4ad1-4e45-5b01-4943c2930553
+X-Xss-Protection: 1; mode=block
+
+{"code":400,"msg":"Bad Request: invalid field combination passed. Allowed request fields for apod method are 'concept_tags', 'date', 'hd', 'count', 'start_date', 'end_date', 'thumbs'","service_version":"v1"}

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-const RecordModeEnv = "HTTTTEST_RECORD_MODE"
+const RecordModeEnv = "HTTTEST_RECORD_MODE"
 
 type config struct {
 	isRecordMode     bool
@@ -52,6 +52,7 @@ func callerDir() string {
 // NewDefaultTestClient returns a new http.Client that will either dump requests to the given dir or read them from it.
 // It can be used to record and replay http requests.
 func NewDefaultTestClient(t *testing.T, opts ...Option) *http.Client {
+	t.Helper()
 	scheme, err := NewSequentialNamingScheme(
 		path.Join(callerDir(), "testdata", t.Name()),
 	)

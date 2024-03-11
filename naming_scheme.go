@@ -28,7 +28,7 @@ type SequentialNamingScheme struct {
 }
 
 func NewSequentialNamingScheme(dir string) (*SequentialNamingScheme, error) {
-	err := os.MkdirAll(dir, 0660)
+	err := os.MkdirAll(dir, 0760)
 	if err != nil {
 		return nil, fmt.Errorf("error creating directory: %w", err)
 	}
