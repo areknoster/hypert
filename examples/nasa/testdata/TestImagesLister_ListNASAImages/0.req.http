@@ -1,4 +1,4 @@
-GET https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY&end_date=2021-01-04&start_date=2021-01-01 HTTP/1.1
+GET https://api.nasa.gov/planetary/apod?api_key=SANITIZED&end_date=2021-01-04&start_date=2021-01-01 HTTP/1.1
 Host: api.nasa.gov
 User-Agent: Go-http-client/1.1
 

@@ -75,7 +75,7 @@ func NewDefaultTestClient(t *testing.T, opts ...Option) *http.Client {
 		t.Log("test record request mode is on - all requests will be recorded")
 		transport = newRecordTransport(cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
 	} else {
-		t.Log("test record request mode is off - requests will be read from disk")
+		t.Log("test record request mode is off - requests will be read from a directory if available, otherwise they will fail")
 		transport = newReplayTransport(cfg.namingScheme)
 	}
 	cfg.parentHTTPClient.Transport = transport

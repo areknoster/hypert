@@ -12,10 +12,15 @@ import (
 type recordTransport struct {
 	httpTransport http.RoundTripper
 	namingScheme  NamingScheme
+	sanitizer     RequestSanitizer
 }
 
 func newRecordTransport(httpTransport http.RoundTripper, namingScheme NamingScheme, sanitizer RequestSanitizer) *recordTransport {
-	return &recordTransport{httpTransport: httpTransport, namingScheme: namingScheme}
+	return &recordTransport{
+		httpTransport: httpTransport,
+		namingScheme:  namingScheme,
+		sanitizer:     sanitizer,
+	}
 }
 
 func (d *recordTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -42,28 +47,28 @@ func (d *recordTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func (d *recordTransport) dumpReqToFile(name string, req *http.Request) (*http.Request, error) {
-	var buf bytes.Buffer
-	err := req.WriteProxy(&buf)
-	if err != nil {
-		return nil, err
+	if req.Body == nil {
+		req.Body = http.NoBody
 	}
+	reqClone := req.Clone(req.Context())
+	var originalReqBody bytes.Buffer
+	teeReader := io.TeeReader(req.Body, &originalReqBody)
+	reqClone.Body = io.NopCloser(teeReader)
+	sanitizedReq := d.sanitizer.SanitizeRequest(reqClone)
 
 	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	reqBytes := buf.Bytes()
-	_, err = io.Copy(f, bytes.NewReader(reqBytes))
+	err = sanitizedReq.WriteProxy(f)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error writing request to file %s: %w", name, err)
+	}
+	if err := f.Close(); err != nil {
+		return nil, fmt.Errorf("error closing file %s: %w", name, err)
 	}
 
-	req, err = http.ReadRequest(bufio.NewReader(bytes.NewReader(reqBytes)))
-	if err != nil {
-		return nil, err
-	}
-
+	req.Body = io.NopCloser(&originalReqBody)
 	return req, nil
 }
 
