@@ -26,9 +26,9 @@ type listImagesResponse []struct {
 
 func (il *ImagesLister) ListNASAImages(ctx context.Context, from, to time.Time) ([]string, error) {
 	q := url.Values{
-		"api_key":  {il.apiKey},
-		"date":     {from.Format("2006-01-02")},
-		"end_date": {to.Format("2006-01-02")},
+		"api_key":    {il.apiKey},
+		"start_date": {from.Format("2006-01-02")},
+		"end_date":   {to.Format("2006-01-02")},
 	}
 	u := &url.URL{
 		Scheme:   "https",
