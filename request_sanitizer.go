@@ -17,12 +17,21 @@ func DefaultRequestSanitizer() RequestSanitizer {
 	)
 }
 
+// RequestSanitizerFunc is a helper type for a function that implements RequestSanitizer interface.
 type RequestSanitizerFunc func(req *http.Request) *http.Request
 
 func (f RequestSanitizerFunc) SanitizeRequest(req *http.Request) *http.Request {
 	return f(req)
 }
 
+// NoopRequestSanitizer returns a sanitizer that does not modify request.
+func NoopRequestSanitizer() RequestSanitizer {
+	return RequestSanitizerFunc(func(req *http.Request) *http.Request {
+		return req
+	})
+}
+
+// ComposedRequestSanitizer is a sanitizer that sequentially runs passed sanitizers.
 func ComposedRequestSanitizer(s ...RequestSanitizer) RequestSanitizer {
 	return RequestSanitizerFunc(func(req *http.Request) *http.Request {
 		for _, s := range s {
@@ -32,6 +41,8 @@ func ComposedRequestSanitizer(s ...RequestSanitizer) RequestSanitizer {
 	})
 }
 
+// HeadersSanitizer sets listed headers to "SANITIZED".
+// Lookup DefaultHeadersSanitizer for a default value.
 func HeadersSanitizer(headers ...string) RequestSanitizer {
 	return RequestSanitizerFunc(func(req *http.Request) *http.Request {
 		for _, header := range headers {
@@ -43,6 +54,7 @@ func HeadersSanitizer(headers ...string) RequestSanitizer {
 	})
 }
 
+// DefaultHeadersSanitizer is HeadersSanitizer with the most common headers that should be sanitized in most cases.
 func DefaultHeadersSanitizer() RequestSanitizer {
 	return HeadersSanitizer(
 		"Authorization",
@@ -61,6 +73,8 @@ func DefaultHeadersSanitizer() RequestSanitizer {
 	)
 }
 
+// QueryParamsSanitizer sets listed query params in stored request URL to SANITIZED value.
+// Lookup DefaultQueryParamsSanitizer for a default value.
 func QueryParamsSanitizer(params ...string) RequestSanitizer {
 	return RequestSanitizerFunc(func(req *http.Request) *http.Request {
 		q := req.URL.Query()
@@ -74,6 +88,7 @@ func QueryParamsSanitizer(params ...string) RequestSanitizer {
 	})
 }
 
+// DefaultQueryParamsSanitizer is QueryParamsSanitizer with with the most common query params that should be sanitized in most cases.
 func DefaultQueryParamsSanitizer() RequestSanitizer {
 	return QueryParamsSanitizer(
 		"access_token",

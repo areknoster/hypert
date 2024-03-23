@@ -3,13 +3,10 @@ package hypert
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path"
 	"runtime"
 	"testing"
 )
-
-const RecordModeEnv = "hypert_RECORD_MODE"
 
 type config struct {
 	isRecordMode     bool
@@ -18,15 +15,8 @@ type config struct {
 	parentHTTPClient *http.Client
 }
 
+// Option can be used to customize TestClient behaviour. See With* functions to find customization options
 type Option func(*config)
-
-// WithDumpMode allows user to set the record mode explicitly to chosen value.
-// You might prefer to use this option instead of setting the environment variable.
-func WithDumpMode() Option {
-	return func(c *config) {
-		c.isRecordMode = true
-	}
-}
 
 // WithNamingScheme allows user to set the naming scheme for the recorded requests.
 // By default, the naming scheme is set to SequentialNamingScheme.
@@ -36,10 +26,20 @@ func WithNamingScheme(n NamingScheme) Option {
 	}
 }
 
-// WithParentHTTPClient allows user to set the parent http client.
+// WithParentHTTPClient allows user to set the custom parent http client.
+// TestClient's will use passed client's transport in record mode to make actual HTTP calls.
 func WithParentHTTPClient(c *http.Client) Option {
 	return func(cfg *config) {
 		cfg.parentHTTPClient = c
+	}
+}
+
+// WithRequestSanitizer configures RequestSanitizer.
+// You may consider using RequestSanitizerFunc, ComposedRequestSanitizer, NoopRequestSanitizer,
+// QueryParamsSanitizer, HeadersSanitizer helper functions to compose sanitization rules or implement your own, custom sanitizer.
+func WithRequestSanitizer(sanitizer RequestSanitizer) Option {
+	return func(cfg *config) {
+		cfg.requestSanitizer = sanitizer
 	}
 }
 
@@ -49,33 +49,60 @@ func callerDir() string {
 	return path.Dir(filename)
 }
 
-// NewDefaultTestClient returns a new http.Client that will either dump requests to the given dir or read them from it.
-// It can be used to record and replay http requests.
-func NewDefaultTestClient(t *testing.T, opts ...Option) *http.Client {
+// DefaultTestdataDir returns fully qualified directory name following <your package directory>/testdata/<name of the test> convention.
+//
+// Note, that it relies on runtime.Caller function with given skip stack number.
+// Because of that, usually you'd want to call this function directly in a file that belongs to a directory
+// that the test data directory should be placed in.
+func DefaultTestdataDir(t *testing.T) string {
+	return path.Join(callerDir(), "testdata", t.Name())
+}
+
+// TestClient returns a new http.Client that will either dump requests to the given dir or read them from it.
+// It is the main entrypoint for using the hypert's capabilities.
+// It provides sane defaults, that can be overwritten using Option arguments. Option's can be initialized using With* functions.
+//
+// The returned *http.Client should be injected to given component before the tests are run.
+//
+// In most scenarios, you'd set recordModeOn to true during the development, when you have set up the authentication to the HTTP API you're using.
+// This will result in the requests and response pairs being stored in <package name>/testdata/<test name>/<sequential number>.(req|resp).http
+// Before the requests are stored, they are sanitized using DefaultRequestSanitizer. It can be adjusted using WithRequestSanitizer option.
+// Ensure that sanitization works as expected, otherwise sensitive details might be commited
+//
+// recordModeOn should be false when given test is not actively worked on, so in most cases the committed value should be false.
+// This mode will result in the requests and response pairs previously stored being replayed, mimicking interactions with actual HTTP APIs,
+// but skipping making actual calls.
+func TestClient(t *testing.T, recordModeOn bool, opts ...Option) *http.Client {
 	t.Helper()
-	scheme, err := NewSequentialNamingScheme(
-		path.Join(callerDir(), "testdata", t.Name()),
-	)
-	if err != nil {
-		t.Fatal(fmt.Errorf("failed to create naming scheme: %w", err))
-	}
 
 	cfg := &config{
-		namingScheme:     scheme,
-		requestSanitizer: DefaultRequestSanitizer(),
-		isRecordMode:     os.Getenv(RecordModeEnv) != "",
-		parentHTTPClient: &http.Client{},
+		isRecordMode: recordModeOn,
 	}
 	for _, opt := range opts {
 		opt(cfg)
 	}
+	if cfg.namingScheme == nil {
+		requestsDir := path.Join(callerDir(), "testdata", t.Name())
+		t.Logf("hypert: using sequential naming scheme in %s directory", requestsDir)
+		scheme, err := NewSequentialNamingScheme(requestsDir)
+		if err != nil {
+			t.Fatal(fmt.Errorf("failed to create naming scheme: %w", err))
+		}
+		cfg.namingScheme = scheme
+	}
+	if cfg.requestSanitizer == nil {
+		cfg.requestSanitizer = DefaultRequestSanitizer()
+	}
+	if cfg.parentHTTPClient == nil {
+		cfg.parentHTTPClient = &http.Client{}
+	}
 
 	var transport http.RoundTripper
 	if cfg.isRecordMode {
-		t.Log("test record request mode is on - all requests will be recorded")
+		t.Log("hypert: record request mode - requests will be stored")
 		transport = newRecordTransport(cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
 	} else {
-		t.Log("test record request mode is off - requests will be read from a directory if available, otherwise they will fail")
+		t.Log("hypert: replay request mode - requests will be read from previously stored files.")
 		transport = newReplayTransport(cfg.namingScheme)
 	}
 	cfg.parentHTTPClient.Transport = transport

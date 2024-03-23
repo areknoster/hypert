@@ -8,7 +8,7 @@ import (
 )
 
 func TestImagesLister_ListNASAImages(t *testing.T) {
-	httpClient := hypert.NewDefaultTestClient(t)
+	httpClient := hypert.TestClient(t, false) // during the development recordModeOn is set to true
 	lister := NewImagesLister(httpClient, "DEMO_KEY")
 	d1 := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	d2 := d1.Add(3 * 24 * time.Hour)

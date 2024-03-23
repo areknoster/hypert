@@ -14,6 +14,8 @@ func Test_callerDir(t *testing.T) {
 		// the callstack depth of the package user
 		return callerDir()
 	}
+	// windows compatibility. It is not handled in the function itself,
+	// because this form is expected by other os.* function that leverage dir name in this package.
 	cd := filepath.ToSlash(call())
 	cwd, err := os.Getwd()
 	if err != nil {
