@@ -1,6 +1,5 @@
 # hypert
 Opinionated go package for rapid testing of real HTTP APIs integrations.
-Zero deps.
 
 [![build-img]][build-url]
 [![pkg-img]][pkg-url]

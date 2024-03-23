@@ -2,41 +2,11 @@ package hypert
 
 import (
 	"fmt"
-	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"strconv"
 	"sync"
 )
-
-// RequestMeta is some data related to the request, that can be used to create filename in the NamingScheme's FileNames method implementations.
-// The fields are cloned from request's URL and their modification will not affect actual request's values.
-type RequestMeta struct {
-	Header http.Header
-	URL    *url.URL
-}
-
-func cloneURL(u *url.URL) *url.URL {
-	if u == nil { // this shouldn't actually happen, unless there is very weird injected clients' transport setup
-		return nil
-	}
-	var userInfo *url.Userinfo
-	if u.User != nil {
-		userInfoCopy := *u.User
-		userInfo = &userInfoCopy
-	}
-	uCopy := *u
-	uCopy.User = userInfo
-	return &uCopy
-}
-
-func requestMetaFromRequest(req *http.Request) RequestMeta {
-	return RequestMeta{
-		Header: req.Header.Clone(),
-		URL:    cloneURL(req.URL),
-	}
-}
 
 // NamingScheme defines an interface that is used by hypert's test client to store or retrieve files with HTTP requests.
 //
@@ -48,7 +18,7 @@ func requestMetaFromRequest(req *http.Request) RequestMeta {
 //
 // This method should be safe for concurrent use. This requirement can be skipped, if you are the user of the package, and know, that all invocations would  be sequential.
 type NamingScheme interface {
-	FileNames(RequestMeta) (reqFile, respFile string)
+	FileNames(RequestData) (reqFile, respFile string)
 }
 
 // SequentialNamingScheme should be initialized using NewSequentialNamingScheme function.
@@ -76,7 +46,7 @@ func NewSequentialNamingScheme(dir string) (*SequentialNamingScheme, error) {
 	}, nil
 }
 
-func (s *SequentialNamingScheme) FileNames(_ RequestMeta) (reqFile, respFile string) {
+func (s *SequentialNamingScheme) FileNames(_ RequestData) (reqFile, respFile string) {
 	s.requestIndexMx.Lock()
 	requestIndex := strconv.Itoa(s.requestIndex)
 	defer func() {

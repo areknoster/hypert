@@ -6,19 +6,32 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"testing"
 )
 
 type replayTransport struct {
-	scheme NamingScheme
+	t         *testing.T
+	scheme    NamingScheme
+	validator RequestValidator
 }
 
-func newReplayTransport(scheme NamingScheme) *replayTransport {
-	return &replayTransport{scheme: scheme}
+func newReplayTransport(t *testing.T, scheme NamingScheme, validator RequestValidator) *replayTransport {
+	return &replayTransport{
+		t:         t,
+		scheme:    scheme,
+		validator: validator,
+	}
 }
 
 func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	_, respFile := d.scheme.FileNames(requestMetaFromRequest(req))
+	reqFile, respFile := d.scheme.FileNames(requestDataFromRequest(d.t, req))
+	d.readReqFromFile(reqFile)
+
 	return d.readRespFromFile(respFile, req)
+}
+
+func (d *replayTransport) readReqFromFile(name string) (*http.Response, error) {
+	return nil, nil
 }
 
 func (d *replayTransport) readRespFromFile(name string, req *http.Request) (*http.Response, error) {

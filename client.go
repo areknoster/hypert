@@ -1,7 +1,6 @@
 package hypert
 
 import (
-	"fmt"
 	"net/http"
 	"path"
 	"runtime"
@@ -86,7 +85,7 @@ func TestClient(t *testing.T, recordModeOn bool, opts ...Option) *http.Client {
 		t.Logf("hypert: using sequential naming scheme in %s directory", requestsDir)
 		scheme, err := NewSequentialNamingScheme(requestsDir)
 		if err != nil {
-			t.Fatal(fmt.Errorf("failed to create naming scheme: %w", err))
+			t.Fatalf("failed to create naming scheme: %s", err.Error())
 		}
 		cfg.namingScheme = scheme
 	}
@@ -100,10 +99,10 @@ func TestClient(t *testing.T, recordModeOn bool, opts ...Option) *http.Client {
 	var transport http.RoundTripper
 	if cfg.isRecordMode {
 		t.Log("hypert: record request mode - requests will be stored")
-		transport = newRecordTransport(cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
+		transport = newRecordTransport(t, cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
 	} else {
 		t.Log("hypert: replay request mode - requests will be read from previously stored files.")
-		transport = newReplayTransport(cfg.namingScheme)
+		transport = newReplayTransport(t, cfg.namingScheme, ComposedRequestValidator()) // todo: add default validators
 	}
 	cfg.parentHTTPClient.Transport = transport
 	return cfg.parentHTTPClient

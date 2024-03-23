@@ -7,16 +7,19 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"testing"
 )
 
 type recordTransport struct {
 	httpTransport http.RoundTripper
 	namingScheme  NamingScheme
 	sanitizer     RequestSanitizer
+	t             *testing.T
 }
 
-func newRecordTransport(httpTransport http.RoundTripper, namingScheme NamingScheme, sanitizer RequestSanitizer) *recordTransport {
+func newRecordTransport(t *testing.T, httpTransport http.RoundTripper, namingScheme NamingScheme, sanitizer RequestSanitizer) *recordTransport {
 	return &recordTransport{
+		t:             t,
 		httpTransport: httpTransport,
 		namingScheme:  namingScheme,
 		sanitizer:     sanitizer,
@@ -28,7 +31,7 @@ func (d *recordTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		d.httpTransport = http.DefaultTransport
 	}
 
-	reqFile, respFile := d.namingScheme.FileNames(requestMetaFromRequest(req))
+	reqFile, respFile := d.namingScheme.FileNames(requestDataFromRequest(d.t, req))
 	req, err := d.dumpReqToFile(reqFile, req)
 	if err != nil {
 		return nil, err
