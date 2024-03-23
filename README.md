@@ -1,4 +1,4 @@
-# htttest
+# hypert
 Opinionated go package for rapid testing of real HTTP APIs integrations.
 Zero deps.
 
@@ -11,13 +11,13 @@ Zero deps.
 ## Usage
 
 
-[build-img]: https://github.com/areknoster/htttest/workflows/build/badge.svg
-[build-url]: https://github.com/areknoster/htttest/actions
-[pkg-img]: https://pkg.go.dev/badge/areknoster/htttest/
-[pkg-url]: https://pkg.go.dev/github.com/areknoster/htttest/
-[reportcard-img]: https://goreportcard.com/badge/areknoster/htttest/
-[reportcard-url]: https://goreportcard.com/report/areknoster/htttest/
-[coverage-img]: https://codecov.io/gh/areknoster/htttest//branch/main/graph/badge.svg
-[coverage-url]: https://codecov.io/gh/areknoster/htttest/
-[version-img]: https://img.shields.io/github/v/release/areknoster/htttest/
-[version-url]: https://github.com/areknoster/htttest//releases
+[build-img]: https://github.com/areknoster/hypert/workflows/build/badge.svg
+[build-url]: https://github.com/areknoster/hypert/actions
+[pkg-img]: https://pkg.go.dev/badge/areknoster/hypert/
+[pkg-url]: https://pkg.go.dev/github.com/areknoster/hypert/
+[reportcard-img]: https://goreportcard.com/badge/areknoster/hypert/
+[reportcard-url]: https://goreportcard.com/report/areknoster/hypert/
+[coverage-img]: https://codecov.io/gh/areknoster/hypert//branch/main/graph/badge.svg
+[coverage-url]: https://codecov.io/gh/areknoster/hypert/
+[version-img]: https://img.shields.io/github/v/release/areknoster/hypert/
+[version-url]: https://github.com/areknoster/hypert//releases

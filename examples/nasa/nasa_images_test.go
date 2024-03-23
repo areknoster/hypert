@@ -2,13 +2,13 @@ package nasa
 
 import (
 	"context"
-	"github.com/areknoster/htttest"
+	"github.com/areknoster/hypert"
 	"testing"
 	"time"
 )
 
 func TestImagesLister_ListNASAImages(t *testing.T) {
-	httpClient := htttest.NewDefaultTestClient(t)
+	httpClient := hypert.NewDefaultTestClient(t)
 	lister := NewImagesLister(httpClient, "DEMO_KEY")
 	d1 := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	d2 := d1.Add(3 * 24 * time.Hour)

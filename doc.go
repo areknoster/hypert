@@ -1,2 +1,2 @@
-// Package htttest is built for rapid testing of real HTTP APIs integrations.
-package htttest
+// Package hypert is built for rapid testing of real HTTP APIs integrations.
+package hypert

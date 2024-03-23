@@ -1,4 +1,4 @@
-package htttest
+package hypert
 
 import (
 	"fmt"

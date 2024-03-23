@@ -1,4 +1,4 @@
-package htttest
+package hypert
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-const RecordModeEnv = "HTTTEST_RECORD_MODE"
+const RecordModeEnv = "hypert_RECORD_MODE"
 
 type config struct {
 	isRecordMode     bool
