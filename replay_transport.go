@@ -3,35 +3,63 @@ package hypert
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"testing"
 )
 
 type replayTransport struct {
-	t         *testing.T
+	t         T
 	scheme    NamingScheme
 	validator RequestValidator
+	sanitizer RequestSanitizer
 }
 
-func newReplayTransport(t *testing.T, scheme NamingScheme, validator RequestValidator) *replayTransport {
+func newReplayTransport(t T, scheme NamingScheme, validator RequestValidator, sanitizer RequestSanitizer) *replayTransport {
 	return &replayTransport{
 		t:         t,
 		scheme:    scheme,
 		validator: validator,
+		sanitizer: sanitizer,
 	}
 }
 
 func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	reqFile, respFile := d.scheme.FileNames(requestDataFromRequest(d.t, req))
-	d.readReqFromFile(reqFile)
+	sanitizedReq := d.sanitizer.SanitizeRequest(req)
+	requestData, err := requestDataFromRequest(sanitizedReq)
+	if err != nil {
+		return nil, fmt.Errorf("error getting request data: %w", err)
+	}
+	reqFile, respFile := d.scheme.FileNames(requestData)
+	recordedReq, err := d.readReqFromFile(reqFile)
+	if err != nil {
+		return nil, fmt.Errorf("error reading request %s from file: %w", requestData, err)
+	}
 
-	return d.readRespFromFile(respFile, req)
+	d.validator.Validate(d.t, recordedReq, requestData)
+
+	respFromFile, err := d.readRespFromFile(respFile, req)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response from file %s: %w", respFile, err)
+	}
+	return respFromFile, nil
 }
 
-func (d *replayTransport) readReqFromFile(name string) (*http.Response, error) {
-	return nil, nil
+func (d *replayTransport) readReqFromFile(name string) (RequestData, error) {
+	f, err := os.OpenFile(name, os.O_RDONLY, 000)
+	if err != nil {
+		return RequestData{}, fmt.Errorf("error opening file %s: %w", name, err)
+	}
+	gotReq, err := http.ReadRequest(bufio.NewReader(f))
+	if err != nil {
+		return RequestData{}, fmt.Errorf("error reading request from file %s: %w", name, err)
+	}
+	reqData, err := requestDataFromRequest(gotReq)
+	if err != nil {
+		return RequestData{}, fmt.Errorf("error getting request data: %w", err)
+	}
+	return reqData, nil
 }
 
 func (d *replayTransport) readRespFromFile(name string, req *http.Request) (*http.Response, error) {

@@ -24,13 +24,6 @@ func (f RequestSanitizerFunc) SanitizeRequest(req *http.Request) *http.Request {
 	return f(req)
 }
 
-// NoopRequestSanitizer returns a sanitizer that does not modify request.
-func NoopRequestSanitizer() RequestSanitizer {
-	return RequestSanitizerFunc(func(req *http.Request) *http.Request {
-		return req
-	})
-}
-
 // ComposedRequestSanitizer is a sanitizer that sequentially runs passed sanitizers.
 func ComposedRequestSanitizer(s ...RequestSanitizer) RequestSanitizer {
 	return RequestSanitizerFunc(func(req *http.Request) *http.Request {
@@ -73,9 +66,9 @@ func DefaultHeadersSanitizer() RequestSanitizer {
 	)
 }
 
-// QueryParamsSanitizer sets listed query params in stored request URL to SANITIZED value.
+// SanitizerQueryParams sets listed query params in stored request URL to SANITIZED value.
 // Lookup DefaultQueryParamsSanitizer for a default value.
-func QueryParamsSanitizer(params ...string) RequestSanitizer {
+func SanitizerQueryParams(params ...string) RequestSanitizer {
 	return RequestSanitizerFunc(func(req *http.Request) *http.Request {
 		q := req.URL.Query()
 		for _, param := range params {
@@ -88,9 +81,9 @@ func QueryParamsSanitizer(params ...string) RequestSanitizer {
 	})
 }
 
-// DefaultQueryParamsSanitizer is QueryParamsSanitizer with with the most common query params that should be sanitized in most cases.
+// DefaultQueryParamsSanitizer is SanitizerQueryParams with with the most common query params that should be sanitized in most cases.
 func DefaultQueryParamsSanitizer() RequestSanitizer {
-	return QueryParamsSanitizer(
+	return SanitizerQueryParams(
 		"access_token",
 		"api_key",
 		"auth",

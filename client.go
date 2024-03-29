@@ -11,6 +11,7 @@ type config struct {
 	isRecordMode     bool
 	namingScheme     NamingScheme
 	requestSanitizer RequestSanitizer
+	requestValidator RequestValidator
 	parentHTTPClient *http.Client
 }
 
@@ -35,10 +36,17 @@ func WithParentHTTPClient(c *http.Client) Option {
 
 // WithRequestSanitizer configures RequestSanitizer.
 // You may consider using RequestSanitizerFunc, ComposedRequestSanitizer, NoopRequestSanitizer,
-// QueryParamsSanitizer, HeadersSanitizer helper functions to compose sanitization rules or implement your own, custom sanitizer.
+// SanitizerQueryParams, HeadersSanitizer helper functions to compose sanitization rules or implement your own, custom sanitizer.
 func WithRequestSanitizer(sanitizer RequestSanitizer) Option {
 	return func(cfg *config) {
 		cfg.requestSanitizer = sanitizer
+	}
+}
+
+// WithRequestValidator allows user to set the request validator.
+func WithRequestValidator(v RequestValidator) Option {
+	return func(cfg *config) {
+		cfg.requestValidator = v
 	}
 }
 
@@ -71,7 +79,7 @@ func DefaultTestdataDir(t *testing.T) string {
 // recordModeOn should be false when given test is not actively worked on, so in most cases the committed value should be false.
 // This mode will result in the requests and response pairs previously stored being replayed, mimicking interactions with actual HTTP APIs,
 // but skipping making actual calls.
-func TestClient(t *testing.T, recordModeOn bool, opts ...Option) *http.Client {
+func TestClient(t T, recordModeOn bool, opts ...Option) *http.Client {
 	t.Helper()
 
 	cfg := &config{
@@ -95,6 +103,9 @@ func TestClient(t *testing.T, recordModeOn bool, opts ...Option) *http.Client {
 	if cfg.parentHTTPClient == nil {
 		cfg.parentHTTPClient = &http.Client{}
 	}
+	if cfg.requestValidator == nil {
+		cfg.requestValidator = DefaultRequestValidator()
+	}
 
 	var transport http.RoundTripper
 	if cfg.isRecordMode {
@@ -102,8 +113,21 @@ func TestClient(t *testing.T, recordModeOn bool, opts ...Option) *http.Client {
 		transport = newRecordTransport(t, cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
 	} else {
 		t.Log("hypert: replay request mode - requests will be read from previously stored files.")
-		transport = newReplayTransport(t, cfg.namingScheme, ComposedRequestValidator()) // todo: add default validators
+		transport = newReplayTransport(t, cfg.namingScheme, cfg.requestValidator, cfg.requestSanitizer)
 	}
 	cfg.parentHTTPClient.Transport = transport
 	return cfg.parentHTTPClient
+}
+
+// T is a subset of testing.T interface that is used by hypert's functions.
+// custom T's implementation can be used to e.g. make logs silent, stop failing on errors and others.
+type T interface {
+	Helper()
+	Name() string
+	Log(args ...any)
+	Logf(format string, args ...any)
+	Error(args ...any)
+	Errorf(format string, args ...any)
+	Fatal(args ...any)
+	Fatalf(format string, args ...any)
 }

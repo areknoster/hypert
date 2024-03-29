@@ -10,13 +10,17 @@ import (
 
 // NamingScheme defines an interface that is used by hypert's test client to store or retrieve files with HTTP requests.
 //
-// FileNames returns a pair of filenames that request and response should be stored in, when Record Mode is active, and retrieved from when Replay Mode is active.
+// FileNames returns a pair of filenames that request and response should be stored in,
+// when Record Mode is active, and retrieved from when Replay Mode is active.
 //
 // File names should be fully qualified (not relative).
 //
-// Each invocation should yield a pair of file names that wasn't yielded before during lifetime of given hypert's http client.
+// Each invocation should yield a pair of file names that
+// wasn't yielded before during lifetime of given hypert's http client.
 //
-// This method should be safe for concurrent use. This requirement can be skipped, if you are the user of the package, and know, that all invocations would  be sequential.
+// This method should be safe for concurrent use.
+// This requirement can be skipped, if you are the user of the package,
+// and know, that all invocations would  be sequential.
 type NamingScheme interface {
 	FileNames(RequestData) (reqFile, respFile string)
 }

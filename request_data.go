@@ -2,18 +2,23 @@ package hypert
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"testing"
 )
 
 // RequestData is some data related to the request, that can be used to create filename in the NamingScheme's FileNames method implementations or during request validation.
 // The fields are cloned from request's fields and their modification will not affect actual request's values.
 type RequestData struct {
-	Header    http.Header
+	Headers   http.Header
 	URL       *url.URL
+	Method    string
 	BodyBytes []byte
+}
+
+func (r RequestData) String() string {
+	return fmt.Sprintf("%s %s", r.Method, r.URL)
 }
 
 func cloneURL(u *url.URL) *url.URL {
@@ -30,7 +35,7 @@ func cloneURL(u *url.URL) *url.URL {
 	return &uCopy
 }
 
-func requestDataFromRequest(t *testing.T, req *http.Request) RequestData {
+func requestDataFromRequest(req *http.Request) (RequestData, error) {
 	if req.Body == nil {
 		req.Body = http.NoBody
 	}
@@ -39,12 +44,13 @@ func requestDataFromRequest(t *testing.T, req *http.Request) RequestData {
 	req.Body = io.NopCloser(&originalReqBody)
 	gotBodyBytes, err := io.ReadAll(teeReader)
 	if err != nil {
-		t.Fatal("hypert: got error when reading request body")
+		return RequestData{}, fmt.Errorf("error reading request body: %w", err)
 	}
 
 	return RequestData{
-		Header:    req.Header.Clone(),
+		Headers:   req.Header.Clone(),
 		URL:       cloneURL(req.URL),
+		Method:    req.Method,
 		BodyBytes: gotBodyBytes,
-	}
+	}, nil
 }

@@ -28,7 +28,7 @@ func TestNewComposedRequestSanitizer(t *testing.T) {
 }
 
 func TestHeadersSanitizer(t *testing.T) {
-	s := HeadersSanitizer("X-Request-Header-Sanitizer")
+	s := HeadersSanitizer("X-Request-Headers-Sanitizer")
 
 	req, _ := http.NewRequest("GET", "http://example.com", nil)
 	req.Header.Set("X-Request-Header-Sanitizer", "1")
@@ -44,7 +44,7 @@ func TestHeadersSanitizer(t *testing.T) {
 }
 
 func TestQueryParamsSanitizer(t *testing.T) {
-	s := QueryParamsSanitizer("param1", "param2")
+	s := SanitizerQueryParams("param1", "param2")
 
 	req, _ := http.NewRequest("GET", "http://example.com?param1=1&param2=2&param3=3", nil)
 	sanitizedReq := s.SanitizeRequest(req)

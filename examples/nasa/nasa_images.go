@@ -41,6 +41,7 @@ func (il *ImagesLister) ListNASAImages(ctx context.Context, from, to time.Time) 
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add("Sample-Header", "sample-value")
 
 	resp, err := il.client.Do(req)
 	if err != nil {
