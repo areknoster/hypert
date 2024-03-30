@@ -28,15 +28,16 @@ func TestNewComposedRequestSanitizer(t *testing.T) {
 }
 
 func TestHeadersSanitizer(t *testing.T) {
-	s := HeadersSanitizer("X-Request-Headers-Sanitizer")
+	const testedHeader = "X-Request-Headers-Sanitizer"
+	s := HeadersSanitizer(testedHeader)
 
 	req, _ := http.NewRequest("GET", "http://example.com", nil)
-	req.Header.Set("X-Request-Header-Sanitizer", "1")
+	req.Header.Set(testedHeader, "1")
 
 	originalHeadersCount := len(req.Header)
 	sanitizedReq := s.SanitizeRequest(req)
-	if sanitizedReq.Header.Get("X-Request-Header-Sanitizer") != "SANITIZED" {
-		t.Errorf("expected SANITIZED, got %s", sanitizedReq.Header.Get("X-Request-Header-Sanitizer"))
+	if sanitizedReq.Header.Get(testedHeader) != "SANITIZED" {
+		t.Errorf("expected SANITIZED, got %s", sanitizedReq.Header.Get(testedHeader))
 	}
 	if len(sanitizedReq.Header) != originalHeadersCount {
 		t.Errorf("original headers count doesn't equal headers count after sanitization. Expected %d, got %d", originalHeadersCount, len(req.Header))
