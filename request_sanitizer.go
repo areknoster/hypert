@@ -4,7 +4,7 @@ import "net/http"
 
 // RequestSanitizer ensures, that no sensitive data is written to the request records.
 // The sanitized version would be stored, whilst the original one would be sent in the record mode.
-// It is allowed to mutate the request in place, becuase it is copied before invoking the RoundTrip method.
+// It is allowed to mutate the request in place, because it is copied before invoking the RoundTrip method.
 type RequestSanitizer interface {
 	SanitizeRequest(req *http.Request) *http.Request
 }

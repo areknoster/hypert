@@ -92,7 +92,7 @@ Hypert is released under the [MIT License](LICENSE).
 [build-url]: https://github.com/areknoster/hypert/actions
 [pkg-img]: https://pkg.go.dev/badge/areknoster/hypert/
 [pkg-url]: https://pkg.go.dev/github.com/areknoster/hypert/
-[reportcard-img]: https://goreportcard.com/badge/areknoster/hypert/
+[reportcard-img]: https://goreportcard.com/badge/github.com/areknoster/hypert/
 [reportcard-url]: https://goreportcard.com/report/areknoster/hypert/
 [coverage-img]: https://codecov.io/gh/areknoster/hypert//branch/main/graph/badge.svg
 [coverage-url]: https://codecov.io/gh/areknoster/hypert/

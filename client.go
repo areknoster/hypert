@@ -74,7 +74,7 @@ func DefaultTestdataDir(t *testing.T) string {
 // In most scenarios, you'd set recordModeOn to true during the development, when you have set up the authentication to the HTTP API you're using.
 // This will result in the requests and response pairs being stored in <package name>/testdata/<test name>/<sequential number>.(req|resp).http
 // Before the requests are stored, they are sanitized using DefaultRequestSanitizer. It can be adjusted using WithRequestSanitizer option.
-// Ensure that sanitization works as expected, otherwise sensitive details might be commited
+// Ensure that sanitization works as expected, otherwise sensitive details might be committed
 //
 // recordModeOn should be false when given test is not actively worked on, so in most cases the committed value should be false.
 // This mode will result in the requests and response pairs previously stored being replayed, mimicking interactions with actual HTTP APIs,
