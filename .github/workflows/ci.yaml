@@ -27,7 +27,6 @@ jobs:
           # When `install-mode` is `goinstall` the value can be v1.2.3, `latest`, or the hash of a commit.
           version: v1.57
 
-
   test:
     env:
       GOPATH: ${{ github.workspace }}
@@ -39,7 +38,7 @@ jobs:
     strategy:
       matrix:
         go-version: [1.18.x, stable]
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -55,7 +54,21 @@ jobs:
         with:
           path: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}
       - name: Test
-        run: go test -v -count=1 -race -shuffle=on -coverprofile=coverage.txt ./...
+        run: go test -v -count=1 -race -shuffle=on ./...
+  test-coverage:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          check-latest: true
+          cache: true
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Test
+        run: go test -coverprofile=coverage.txt ./...
       - name: Upload Coverage
         uses: codecov/codecov-action@v4
         continue-on-error: true

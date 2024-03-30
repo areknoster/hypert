@@ -66,14 +66,14 @@ Now your tests:
 - are deterministic
 - are fast
 - bring the same confidence as integration tests
-## Configuration
 
-Hypert provides various options to customize its behavior:
+## Stability
 
-- `WithNamingScheme`: Set the naming scheme for recorded requests
-- `WithParentHTTPClient`: Set a custom parent `http.Client`
-- `WithRequestSanitizer`: Configure the request sanitizer to remove sensitive information
-- `WithRequestValidator`: Set a custom request validator
+Hypert is currently in the early stages of development. 
+The plan is to stabilize the API and feature set based on feedback from the community, and only then release a stable version.
+
+I plan to maintain backward compatibility as much as possible, but breaking changes may occur before the first stable release.
+
 
 ## Examples
 
