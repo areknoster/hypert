@@ -55,6 +55,6 @@ jobs:
         with:
           path: ${{ env.GOPATH }}/src/github.com/${{ github.repository }}
       - name: Test
-        run: |
-          go get -d -t ./...
-          go test ./...
+        run: go test -race -covermode=atomic -coverprofile=coverage.out
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3

@@ -3,7 +3,8 @@
 [![pkg-img]][pkg-url]
 [![reportcard-img]][reportcard-url]
 [![coverage-img]][coverage-url]
-[![version-img]][version-url]
+[![tag-img]][tag-url]
+[![license-img]][license-url]
 
 Hypert is an open-source Go library that simplifies testing of HTTP API clients. It provides a convenient way to record and replay HTTP interactions, making it easy to create reliable and maintainable tests for your API clients.
 
@@ -93,8 +94,10 @@ Hypert is released under the [MIT License](LICENSE).
 [pkg-img]: https://pkg.go.dev/badge/areknoster/hypert/
 [pkg-url]: https://pkg.go.dev/github.com/areknoster/hypert/
 [reportcard-img]: https://goreportcard.com/badge/github.com/areknoster/hypert/
-[reportcard-url]: https://goreportcard.com/report/areknoster/hypert/
+[reportcard-url]: https://goreportcard.com/report/github.com/areknoster/hypert/
 [coverage-img]: https://codecov.io/gh/areknoster/hypert//branch/main/graph/badge.svg
 [coverage-url]: https://codecov.io/gh/areknoster/hypert/
-[version-img]: https://img.shields.io/github/v/release/areknoster/hypert/
-[version-url]: https://github.com/areknoster/hypert//releases
+[license-img]: https://img.shields.io/github/license/areknoster/hypert/
+[license-url]: https://github.com/areknoster/hypert/blob/main/LICENSE
+[tag-img]: https://img.shields.io/github/v/tag/areknoster/hypert
+[tag-url]: https://github.com/areknoster/hypert/tags
