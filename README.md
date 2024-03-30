@@ -1,5 +1,5 @@
 # Hypert - HTTP API Testing Made Easy
-[![build-img]][build-url]
+[![ci-img]][ci-url]
 [![pkg-img]][pkg-url]
 [![reportcard-img]][reportcard-url]
 [![coverage-img]][coverage-url]
@@ -89,8 +89,8 @@ Hypert is released under the [MIT License](LICENSE).
 
 ---
 
-[build-img]: https://github.com/areknoster/hypert/workflows/build/badge.svg
-[build-url]: https://github.com/areknoster/hypert/actions
+[ci-img]: https://github.com/areknoster/hypert/actions/workflows/ci.yaml/badge.svg
+[ci-url]: https://github.com/areknoster/hypert/actions/workflows/ci.yam
 [pkg-img]: https://pkg.go.dev/badge/areknoster/hypert/
 [pkg-url]: https://pkg.go.dev/github.com/areknoster/hypert/
 [reportcard-img]: https://goreportcard.com/badge/github.com/areknoster/hypert
