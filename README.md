@@ -68,12 +68,7 @@ Now your tests:
 - bring the same confidence as integration tests
 
 ## Stability
-
-Hypert is currently in the early stages of development. 
-The plan is to stabilize the API and feature set based on feedback from the community, and only then release a stable version.
-
-I plan to maintain backward compatibility as much as possible, but breaking changes may occur before the first stable release.
-
+I plan to maintain backward compatibility as much as possible, but breaking changes may occur before the first stable release, v1.0.0 if major issues are discovered.
 
 ## Examples
 

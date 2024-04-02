@@ -1,0 +1,13 @@
+HTTP/1.1 200 OK
+Content-Length: 7
+Accept-Ranges: bytes
+Content-Type: text/plain
+Date: Tue, 02 Apr 2024 21:22:03 GMT
+Etag: "ca9589da974c4cb8104b27125cba2c0e"
+Last-Modified: Tue, 02 Apr 2024 20:45:42 GMT
+Server: AmazonS3
+X-Amz-Id-2: OVC0bPXGCH4dDs0ruNtOYUEoiACCCFiux2tXzdjPSlPxVjzNHgssYnJqD2BmWPvawvAHFBVeswk=
+X-Amz-Request-Id: G1TBM369035ZJHWK
+X-Amz-Server-Side-Encryption: AES256
+
+oldest

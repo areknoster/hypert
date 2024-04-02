@@ -1,0 +1,14 @@
+HTTP/1.1 200 OK
+Transfer-Encoding: chunked
+Content-Type: application/xml
+Date: Tue, 02 Apr 2024 21:22:02 GMT
+Server: AmazonS3
+X-Amz-Bucket-Region: us-east-1
+X-Amz-Id-2: HtcugD3CwdGGBv2z97yhOolWTJMA7KjBkyJLGZkomiBqwGsdUN4QKlvTZhlOL0cToJbN9xjcy60=
+X-Amz-Request-Id: D60BZ2K4M6J15HRC
+
+2a6
+<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>hypert-example-download-oldest-test-bucket</Name><Prefix></Prefix><KeyCount>2</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>newer.txt</Key><LastModified>2024-04-02T20:45:45.000Z</LastModified><ETag>&quot;80a25cd970eeae1ceca845f4f31d8db3&quot;</ETag><Size>6</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>oldest.txt</Key><LastModified>2024-04-02T20:45:42.000Z</LastModified><ETag>&quot;ca9589da974c4cb8104b27125cba2c0e&quot;</ETag><Size>7</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+0
+

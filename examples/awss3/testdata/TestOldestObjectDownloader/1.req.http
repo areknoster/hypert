@@ -1,0 +1,11 @@
+GET https://hypert-example-download-oldest-test-bucket.s3.us-east-1.amazonaws.com/oldest.txt?x-id=GetObject HTTP/1.1
+Host: hypert-example-download-oldest-test-bucket.s3.us-east-1.amazonaws.com
+User-Agent: aws-sdk-go-v2/1.26.1 os/macos lang/go#1.22.0 md/GOOS#darwin md/GOARCH#arm64 api/s3#1.53.1
+Accept-Encoding: identity
+Amz-Sdk-Invocation-Id: 49bc82c7-8383-46f1-a611-2aef4a385ec0
+Amz-Sdk-Request: attempt=1; max=3
+Authorization: SANITIZED
+X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+X-Amz-Date: 20240402T212202Z
+X-Amz-Security-Token: SANITIZED
+
