@@ -110,7 +110,7 @@ func TestClient(t T, recordModeOn bool, opts ...Option) *http.Client {
 	var transport http.RoundTripper
 	if cfg.isRecordMode {
 		t.Log("hypert: record request mode - requests will be stored")
-		transport = newRecordTransport(t, cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
+		transport = newRecordTransport(cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
 	} else {
 		t.Log("hypert: replay request mode - requests will be read from previously stored files.")
 		transport = newReplayTransport(t, cfg.namingScheme, cfg.requestValidator, cfg.requestSanitizer)

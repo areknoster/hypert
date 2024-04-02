@@ -1,0 +1,4 @@
+HTTP/2.0 200 OK
+SampleRespHeader: SampleRespHeaderValue
+
+Wassup, world?

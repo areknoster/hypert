@@ -1,5 +1,0 @@
-package hypert
-
-func Example() {
-
-}

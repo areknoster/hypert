@@ -1,0 +1,4 @@
+GET https://example.com HTTP/1.1
+Host: example.com
+Sample-Header: sample-value
+

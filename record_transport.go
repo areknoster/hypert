@@ -13,12 +13,10 @@ type recordTransport struct {
 	httpTransport http.RoundTripper
 	namingScheme  NamingScheme
 	sanitizer     RequestSanitizer
-	t             T
 }
 
-func newRecordTransport(t T, httpTransport http.RoundTripper, namingScheme NamingScheme, sanitizer RequestSanitizer) *recordTransport {
+func newRecordTransport(httpTransport http.RoundTripper, namingScheme NamingScheme, sanitizer RequestSanitizer) *recordTransport {
 	return &recordTransport{
-		t:             t,
 		httpTransport: httpTransport,
 		namingScheme:  namingScheme,
 		sanitizer:     sanitizer,
