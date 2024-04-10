@@ -35,9 +35,7 @@ func (n noopRequestSanitizer) SanitizeRequest(req *http.Request) *http.Request {
 
 type noopRequestValidator struct{}
 
-func (n noopRequestValidator) Validate(t T, recorded RequestData, got RequestData) {
-	return
-}
+func (n noopRequestValidator) Validate(t T, recorded RequestData, got RequestData) {}
 
 func Test_configWithDefaults(t *testing.T) {
 	t.Run("should return default config", func(t *testing.T) {
