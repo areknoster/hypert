@@ -30,7 +30,7 @@ func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	return m.resp, m.err
 }
 
-func TestRecordTransport_RoundTrip(t *testing.T) {
+func TestRecordTransport_RoundTripHappyPath(t *testing.T) {
 	staticNS := &staticNamingScheme{
 		reqFile:  path.Join(t.TempDir(), "request.txt"),
 		respFile: path.Join(t.TempDir(), "response.txt"),

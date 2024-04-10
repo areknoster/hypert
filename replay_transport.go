@@ -3,6 +3,7 @@ package hypert
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,25 +30,31 @@ func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	sanitizedReq := d.sanitizer.SanitizeRequest(req)
 	requestData, err := requestDataFromRequest(sanitizedReq)
 	if err != nil {
-		return nil, fmt.Errorf("get request data: %w", err)
+		return nil, err
 	}
 	reqFile, respFile := d.scheme.FileNames(requestData)
 	recordedReq, err := d.readReqFromFile(reqFile)
 	if err != nil {
-		return nil, fmt.Errorf("read request %s from file: %w", requestData, err)
+		d.t.Fatalf("read request %s from file: %v", requestData, err)
+		return nil, err
 	}
 
 	d.validator.Validate(d.t, recordedReq, requestData)
 
 	respFromFile, err := d.readRespFromFile(respFile, req)
 	if err != nil {
-		return nil, fmt.Errorf("read response from file %s: %w", respFile, err)
+		return nil, err
 	}
 	return respFromFile, nil
 }
 
+const helpMsgReplayFileDoesntExist = `make sure, to record the request first using recordModeOn parameter in the TestClient.`
+
 func (d *replayTransport) readReqFromFile(name string) (RequestData, error) {
 	f, err := os.OpenFile(name, os.O_RDONLY, 000)
+	if errors.Is(err, os.ErrNotExist) {
+		return RequestData{}, fmt.Errorf("file %s does not exist -  %s", name, helpMsgReplayFileDoesntExist)
+	}
 	if err != nil {
 		return RequestData{}, fmt.Errorf("open file %s: %w", name, err)
 	}
@@ -64,6 +71,9 @@ func (d *replayTransport) readReqFromFile(name string) (RequestData, error) {
 
 func (d *replayTransport) readRespFromFile(name string, req *http.Request) (*http.Response, error) {
 	f, err := os.OpenFile(name, os.O_RDONLY, 000)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("file %s does not exist -  %s", name, helpMsgReplayFileDoesntExist)
+	}
 	if err != nil {
 		return nil, err
 	}

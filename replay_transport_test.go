@@ -1,21 +1,32 @@
 package hypert
 
 import (
+	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 )
 
 type mockT struct {
 	T
 	failed bool
+	fatal  bool
+	msg    string
 }
 
 func (m *mockT) Errorf(format string, args ...interface{}) {
 	m.failed = true
+	m.msg = fmt.Sprintf(format, args...)
 }
 
-func TestReplayTransport(t *testing.T) {
+func (m *mockT) Fatalf(format string, args ...interface{}) {
+	m.failed = true
+	m.fatal = true
+	m.msg = fmt.Sprintf(format, args...)
+}
+
+func TestReplayTransport_HappyPath(t *testing.T) {
 	namingScheme := &staticNamingScheme{
 		reqFile:  "testdata/0.req.http",
 		respFile: "testdata/0.resp.http",
@@ -74,4 +85,51 @@ func TestReplayTransport(t *testing.T) {
 	if mockedT.failed == false {
 		t.Errorf("expected mocked T to fail")
 	}
+}
+
+func TestReplayTransport_FilesDontExist(t *testing.T) {
+	namingScheme := &staticNamingScheme{
+		reqFile:  "testdata/doesnt_exist.req.http",
+		respFile: "testdata/doesnt_exist.resp.http",
+	}
+	sanitizer := noopRequestSanitizer{}
+	validator := noopRequestValidator{}
+	sampleReq := func(t *testing.T) *http.Request {
+		req, err := http.NewRequest("PUT", "https://example.com", nil)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+		return req
+	}
+
+	t.Run("should fail with help message if request file doesn't exist", func(t *testing.T) {
+		mockedT := &mockT{}
+		transport := newReplayTransport(mockedT, namingScheme, validator, sanitizer)
+
+		_, err := transport.RoundTrip(sampleReq(t))
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if !mockedT.failed || !mockedT.fatal {
+			t.Errorf("expected mocked T to fail fatally ")
+		}
+		if !strings.Contains(mockedT.msg, helpMsgReplayFileDoesntExist) {
+			t.Errorf("expected error message to contain helper error message, got %q", err.Error())
+		}
+	})
+
+	t.Run("should fail with help message if response file doesn't exist", func(t *testing.T) {
+		mockedT := &mockT{}
+		transport := newReplayTransport(mockedT, namingScheme, validator, sanitizer)
+		_, err := transport.RoundTrip(sampleReq(t))
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if !mockedT.failed || !mockedT.fatal {
+			t.Errorf("expected mocked T to fail fatally ")
+		}
+		if !strings.Contains(mockedT.msg, helpMsgReplayFileDoesntExist) {
+			t.Errorf("expected error message to contain helper error message, got %q", err.Error())
+		}
+	})
 }
