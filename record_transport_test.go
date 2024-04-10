@@ -100,3 +100,40 @@ func TestRecordTransport_RoundTripHappyPath(t *testing.T) {
 		t.Errorf("expected status code %d, got %d", http.StatusOK, storedResp.StatusCode)
 	}
 }
+
+func TestRecordTransport_NilBody(t *testing.T) {
+	staticNS := &staticNamingScheme{
+		reqFile:  path.Join(t.TempDir(), "request.txt"),
+		respFile: path.Join(t.TempDir(), "response.txt"),
+	}
+
+	sampleReq := func() *http.Request {
+		req, err := http.NewRequest("GET", "http://example.com/", nil)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+		return req
+	}
+
+	sampleResp := func() *http.Response {
+		return &http.Response{
+			StatusCode: http.StatusInternalServerError,
+			Body:       io.NopCloser(bytes.NewBufferString("response body")),
+		}
+	}
+	sanitizer := RequestSanitizerFunc(func(req *http.Request) *http.Request {
+		req.Header.Set("Sanitizer", "was run")
+		return req
+	})
+
+	mockRT := &mockRoundTripper{
+		resp: sampleResp(),
+	}
+
+	rt := newRecordTransport(mockRT, staticNS, sanitizer)
+
+	_, err := rt.RoundTrip(sampleReq())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+}
