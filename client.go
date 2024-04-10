@@ -81,7 +81,21 @@ func DefaultTestdataDir(t *testing.T) string {
 // but skipping making actual calls.
 func TestClient(t T, recordModeOn bool, opts ...Option) *http.Client {
 	t.Helper()
+	cfg := configWithDefaults(t, recordModeOn, opts)
 
+	var transport http.RoundTripper
+	if cfg.isRecordMode {
+		t.Log("hypert: record request mode - requests will be stored")
+		transport = newRecordTransport(cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
+	} else {
+		t.Log("hypert: replay request mode - requests will be read from previously stored files.")
+		transport = newReplayTransport(t, cfg.namingScheme, cfg.requestValidator, cfg.requestSanitizer)
+	}
+	cfg.parentHTTPClient.Transport = transport
+	return cfg.parentHTTPClient
+}
+
+func configWithDefaults(t T, recordModeOn bool, opts []Option) *config {
 	cfg := &config{
 		isRecordMode: recordModeOn,
 	}
@@ -106,17 +120,7 @@ func TestClient(t T, recordModeOn bool, opts ...Option) *http.Client {
 	if cfg.requestValidator == nil {
 		cfg.requestValidator = DefaultRequestValidator()
 	}
-
-	var transport http.RoundTripper
-	if cfg.isRecordMode {
-		t.Log("hypert: record request mode - requests will be stored")
-		transport = newRecordTransport(cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
-	} else {
-		t.Log("hypert: replay request mode - requests will be read from previously stored files.")
-		transport = newReplayTransport(t, cfg.namingScheme, cfg.requestValidator, cfg.requestSanitizer)
-	}
-	cfg.parentHTTPClient.Transport = transport
-	return cfg.parentHTTPClient
+	return cfg
 }
 
 // T is a subset of testing.T interface that is used by hypert's functions.
