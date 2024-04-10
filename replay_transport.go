@@ -29,19 +29,19 @@ func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	sanitizedReq := d.sanitizer.SanitizeRequest(req)
 	requestData, err := requestDataFromRequest(sanitizedReq)
 	if err != nil {
-		return nil, fmt.Errorf("error getting request data: %w", err)
+		return nil, fmt.Errorf("get request data: %w", err)
 	}
 	reqFile, respFile := d.scheme.FileNames(requestData)
 	recordedReq, err := d.readReqFromFile(reqFile)
 	if err != nil {
-		return nil, fmt.Errorf("error reading request %s from file: %w", requestData, err)
+		return nil, fmt.Errorf("read request %s from file: %w", requestData, err)
 	}
 
 	d.validator.Validate(d.t, recordedReq, requestData)
 
 	respFromFile, err := d.readRespFromFile(respFile, req)
 	if err != nil {
-		return nil, fmt.Errorf("error reading response from file %s: %w", respFile, err)
+		return nil, fmt.Errorf("read response from file %s: %w", respFile, err)
 	}
 	return respFromFile, nil
 }
@@ -49,15 +49,15 @@ func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 func (d *replayTransport) readReqFromFile(name string) (RequestData, error) {
 	f, err := os.OpenFile(name, os.O_RDONLY, 000)
 	if err != nil {
-		return RequestData{}, fmt.Errorf("error opening file %s: %w", name, err)
+		return RequestData{}, fmt.Errorf("open file %s: %w", name, err)
 	}
 	gotReq, err := http.ReadRequest(bufio.NewReader(f))
 	if err != nil {
-		return RequestData{}, fmt.Errorf("error reading request from file %s: %w", name, err)
+		return RequestData{}, fmt.Errorf("read request from file %s: %w", name, err)
 	}
 	reqData, err := requestDataFromRequest(gotReq)
 	if err != nil {
-		return RequestData{}, fmt.Errorf("error getting request data: %w", err)
+		return RequestData{}, fmt.Errorf("get request data: %w", err)
 	}
 	return reqData, nil
 }

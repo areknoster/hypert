@@ -44,7 +44,7 @@ func requestDataFromRequest(req *http.Request) (RequestData, error) {
 	req.Body = io.NopCloser(&originalReqBody)
 	gotBodyBytes, err := io.ReadAll(teeReader)
 	if err != nil {
-		return RequestData{}, fmt.Errorf("error reading request body: %w", err)
+		return RequestData{}, fmt.Errorf("read request body: %w", err)
 	}
 
 	return RequestData{

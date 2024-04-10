@@ -30,7 +30,7 @@ func (d *recordTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	reqData, err := requestDataFromRequest(req)
 	if err != nil {
-		return nil, fmt.Errorf("error getting request data: %w", err)
+		return nil, fmt.Errorf("get request data: %w", err)
 	}
 
 	reqFile, respFile := d.namingScheme.FileNames(reqData)
@@ -67,10 +67,10 @@ func (d *recordTransport) dumpReqToFile(name string, req *http.Request) (*http.R
 	}
 	err = sanitizedReq.WriteProxy(f)
 	if err != nil {
-		return nil, fmt.Errorf("error writing request to file %s: %w", name, err)
+		return nil, fmt.Errorf("write request to file %s: %w", name, err)
 	}
 	if err := f.Close(); err != nil {
-		return nil, fmt.Errorf("error closing file %s: %w", name, err)
+		return nil, fmt.Errorf("close file %s: %w", name, err)
 	}
 
 	req.Body = io.NopCloser(&originalReqBody)
@@ -86,7 +86,7 @@ func (d *recordTransport) dumpRespToFile(name string, req *http.Request, resp *h
 
 	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("error opening file %s: %w", name, err)
+		return nil, fmt.Errorf("open file %s: %w", name, err)
 	}
 	respBytes := buf.Bytes()
 
@@ -95,7 +95,7 @@ func (d *recordTransport) dumpRespToFile(name string, req *http.Request, resp *h
 		return nil, err
 	}
 	if err := f.Close(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("close file %s: %w", name, err)
 	}
 
 	resp, err = http.ReadResponse(bufio.NewReader(bytes.NewReader(respBytes)), req)

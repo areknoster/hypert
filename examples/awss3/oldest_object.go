@@ -27,7 +27,7 @@ func (d *OldestObjectDownloader) DownloadOldestObject(ctx context.Context, bucke
 			ContinuationToken: continuationToken,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to list objects in bucket %s: %w", bucket, err)
+			return nil, fmt.Errorf("list objects in bucket %s: %w", bucket, err)
 		}
 		for _, object := range objects.Contents {
 			if object.LastModified.Before(oldestTime) {
@@ -49,15 +49,15 @@ func (d *OldestObjectDownloader) DownloadOldestObject(ctx context.Context, bucke
 		Key:    &oldestKey,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get object %s from bucket %s: %w", oldestKey, bucket, err)
+		return nil, fmt.Errorf("get object %s from bucket %s: %w", oldestKey, bucket, err)
 	}
 	readBytes, err := io.ReadAll(getObjectOutput.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read object %s from bucket %s: %w", oldestKey, bucket, err)
+		return nil, fmt.Errorf("read object %s from bucket %s: %w", oldestKey, bucket, err)
 	}
 	err = getObjectOutput.Body.Close()
 	if err != nil {
-		log.Printf("failed to close object %s from bucket %s: %v", oldestKey, bucket, err)
+		log.Printf("close object %s from bucket %s: %v", oldestKey, bucket, err)
 	}
 	return readBytes, nil
 }
