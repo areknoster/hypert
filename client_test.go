@@ -29,6 +29,24 @@ func Test_callerDir(t *testing.T) {
 	}
 }
 
+func Test_DefaultTestdataDir(t *testing.T) {
+	callAsIfExternalUser := func() string {
+		// the callstack depth of the package user
+		return DefaultTestdataDir(t)
+	}
+	// windows compatibility. It is not handled in the function itself,
+	// because this form is expected by other os.* function that leverage dir name in this package.
+	cd := filepath.ToSlash(callAsIfExternalUser())
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedPath := filepath.Join(cwd, "testdata", t.Name())
+	if cd != filepath.ToSlash(expectedPath) {
+		t.Fatalf("expected %s, got %s", cwd, cd)
+	}
+}
+
 type noopRequestSanitizer struct{}
 
 func (n noopRequestSanitizer) SanitizeRequest(req *http.Request) *http.Request {
