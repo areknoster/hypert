@@ -52,8 +52,8 @@ func WithRequestValidator(v RequestValidator) Option {
 
 // returns caller directory, assuming the caller is 2 levels up
 func callerDir() string {
-	_, filename, _, _ := runtime.Caller(2)
-	return path.Dir(filename)
+	_, filePath, _, _ := runtime.Caller(3)
+	return path.Dir(filePath)
 }
 
 // DefaultTestdataDir returns fully qualified directory name following <your package directory>/testdata/<name of the test> convention.

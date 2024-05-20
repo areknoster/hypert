@@ -11,13 +11,15 @@ import (
 )
 
 func Test_callerDir(t *testing.T) {
-	call := func() string {
+	callAsIfExternalUser := func() string {
 		// the callstack depth of the package user
-		return callerDir()
+		return func() string {
+			return callerDir()
+		}()
 	}
 	// windows compatibility. It is not handled in the function itself,
 	// because this form is expected by other os.* function that leverage dir name in this package.
-	cd := filepath.ToSlash(call())
+	cd := filepath.ToSlash(callAsIfExternalUser())
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
