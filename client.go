@@ -12,6 +12,7 @@ type config struct {
 	namingScheme     NamingScheme
 	requestSanitizer RequestSanitizer
 	requestValidator RequestValidator
+	responseMutator  ResponseMutator
 	parentHTTPClient *http.Client
 }
 
@@ -47,6 +48,13 @@ func WithRequestSanitizer(sanitizer RequestSanitizer) Option {
 func WithRequestValidator(v RequestValidator) Option {
 	return func(cfg *config) {
 		cfg.requestValidator = v
+	}
+}
+
+// WithResponseMutator allows user to set the response mutator.
+func WithResponseMutator(m ResponseMutator) Option {
+	return func(cfg *config) {
+		cfg.responseMutator = m
 	}
 }
 
