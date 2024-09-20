@@ -84,6 +84,13 @@ func TestRequestValidators(t *testing.T) {
 			got:       RequestData{Headers: http.Header{"Key1": []string{"Value2"}}},
 			expectErr: true,
 		},
+		{
+			name:      "HeadersValidator_Sanitized",
+			validator: HeadersValidator(),
+			recorded:  RequestData{Headers: http.Header{"Key1": []string{"SANITIZED"}}},
+			got:       RequestData{Headers: http.Header{"Key1": []string{"Value1"}}},
+			expectErr: false,
+		},
 	}
 
 	for _, tc := range testCases {

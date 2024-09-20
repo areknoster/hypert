@@ -82,9 +82,11 @@ func HeadersValidator() RequestValidator {
 		recordedHeaders := recorded.Headers.Clone()
 		recordedHeaders.Del("User-Agent")
 		recordedHeaders.Del("Content-Length")
-
 		for key := range recordedHeaders {
 			recordedHeader, gotHeader := recordedHeaders.Get(key), got.Headers.Get(key)
+			if recordedHeader == "SANITIZED" {
+				continue
+			}
 			if recordedHeader != gotHeader {
 				t.Errorf("expected header '%s' to be '%s', got '%s'", key, recordedHeader, gotHeader)
 			}
