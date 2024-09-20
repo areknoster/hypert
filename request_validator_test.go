@@ -91,6 +91,20 @@ func TestRequestValidators(t *testing.T) {
 			got:       RequestData{Headers: http.Header{"Key1": []string{"Value1"}}},
 			expectErr: false,
 		},
+		{
+			name:      "HeadersValidator_Sanitized_Both",
+			validator: HeadersValidator(),
+			recorded:  RequestData{Headers: http.Header{"Key1": []string{"SANITIZED"}}},
+			got:       RequestData{Headers: http.Header{"Key1": []string{"SANITIZED"}}},
+			expectErr: false,
+		},
+		{
+			name:      "HeadersValidator_SanitizedOneAnotherEmpty",
+			validator: HeadersValidator(),
+			recorded:  RequestData{Headers: http.Header{"Key1": []string{"SANITIZED"}}},
+			got:       RequestData{Headers: http.Header{"Key1": []string{}}},
+			expectErr: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -98,8 +112,8 @@ func TestRequestValidators(t *testing.T) {
 
 			mT := &mockT{}
 			tc.validator.Validate(mT, tc.recorded, tc.got)
-			if tc.expectErr && !mT.failed {
-				t.Error("expected error, got none")
+			if tc.expectErr != mT.failed {
+				t.Errorf("expected error value mismatch. Expected %v, got %v", tc.expectErr, mT.failed)
 			}
 		})
 	}
