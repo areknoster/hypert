@@ -1,10 +1,12 @@
 on:
   push:
-    branches: '**'
+    branches:
+      - 'main'
     paths-ignore:
       - 'docs/**'
   pull_request:
-    branches: '**'
+    branches:
+      - '**'
     paths-ignore:
       - 'docs/**'
 
@@ -22,7 +24,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.57
+          version: v1.60
 
   test:
     env:

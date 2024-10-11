@@ -39,7 +39,7 @@ func TestReplayTransport_HappyPath(t *testing.T) {
 		return req
 	})
 	mockedT := &mockT{}
-	validator := RequestValidatorFunc(func(sanitizerT T, recorded RequestData, got RequestData) {
+	validator := RequestValidatorFunc(func(sanitizerT T, recorded RequestData, got RequestData) error {
 		if recorded.Method != "GET" {
 			t.Errorf("expected read from file method to be GET, got %s", recorded.Method)
 		}
@@ -58,6 +58,7 @@ func TestReplayTransport_HappyPath(t *testing.T) {
 		}
 
 		sanitizerT.Errorf("this should fail the mocked T")
+		return nil
 	})
 
 	transport := replayTransport{
@@ -66,14 +67,16 @@ func TestReplayTransport_HappyPath(t *testing.T) {
 		validator: validator,
 		sanitizer: sanitizer,
 	}
-	req, err := http.NewRequest("PUT", "https://example.com", nil)
+	req, err := http.NewRequest("PUT", "https://example.com", http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
+
 	resp, err := transport.RoundTrip(req)
 	if err != nil {
 		t.Fatalf("failed to round trip: %v", err)
 	}
+	defer resp.Body.Close()
 	if resp.Header.Get("SampleRespHeader") != "SampleRespHeaderValue" {
 		t.Fatalf("expected SampleRespHeader to be set")
 	}
@@ -99,9 +102,11 @@ func TestReplayTransport_FilesDontExist(t *testing.T) {
 		respFile: "testdata/doesnt_exist.resp.http",
 	}
 	sanitizer := noopRequestSanitizer{}
-	validator := noopRequestValidator{}
+	validator := RequestValidatorFunc(func(_ T, _ RequestData, _ RequestData) error {
+		return nil
+	})
 	sampleReq := func(t *testing.T) *http.Request {
-		req, err := http.NewRequest("PUT", "https://example.com", nil)
+		req, err := http.NewRequest("PUT", "https://example.com", http.NoBody)
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
@@ -117,9 +122,12 @@ func TestReplayTransport_FilesDontExist(t *testing.T) {
 			sanitizer: sanitizer,
 		}
 
-		_, err := transport.RoundTrip(sampleReq(t))
+		resp, err := transport.RoundTrip(sampleReq(t))
 		if err == nil {
 			t.Fatalf("expected error, got nil")
+		}
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
 		}
 		if !mockedT.failed || !mockedT.fatal {
 			t.Errorf("expected mocked T to fail fatally ")
@@ -137,9 +145,12 @@ func TestReplayTransport_FilesDontExist(t *testing.T) {
 			validator: validator,
 			sanitizer: sanitizer,
 		}
-		_, err := transport.RoundTrip(sampleReq(t))
+		resp, err := transport.RoundTrip(sampleReq(t))
 		if err == nil {
 			t.Fatalf("expected error, got nil")
+		}
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
 		}
 		if !mockedT.failed || !mockedT.fatal {
 			t.Errorf("expected mocked T to fail fatally ")
@@ -157,7 +168,9 @@ func TestReplayTransport_TransformModes(t *testing.T) {
 	}
 
 	sanitizer := NoOpRequestSanitizer{}
-	validator := noopRequestValidator{}
+	validator := RequestValidatorFunc(func(_ T, _ RequestData, _ RequestData) error {
+		return nil
+	})
 
 	transform := ResponseTransformFunc(func(r *http.Response) *http.Response {
 		r.Body = io.NopCloser(bytes.NewBufferString("transformed response body"))
@@ -217,7 +230,7 @@ func TestReplayTransport_TransformModes(t *testing.T) {
 				transport.transform = transform
 			}
 
-			req, err := http.NewRequest("GET", "https://example.com", nil)
+			req, err := http.NewRequest("GET", "https://example.com", http.NoBody)
 			if err != nil {
 				t.Fatalf("failed to create request: %v", err)
 			}
@@ -226,6 +239,7 @@ func TestReplayTransport_TransformModes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to round trip: %v", err)
 			}
+			defer resp.Body.Close()
 
 			bodyBytes, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -233,6 +247,7 @@ func TestReplayTransport_TransformModes(t *testing.T) {
 			}
 
 			if string(bodyBytes) != tc.expectedBody {
+				t.Errorf("expected response body to be %q, got %q", tc.expectedBody, string(bodyBytes))
 				t.Errorf("expected response body to be %q, got %q", tc.expectedBody, string(bodyBytes))
 			}
 		})

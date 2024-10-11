@@ -15,7 +15,7 @@ type staticNamingScheme struct {
 	respFile string
 }
 
-func (m *staticNamingScheme) FileNames(_ RequestData) (string, string) {
+func (m *staticNamingScheme) FileNames(_ RequestData) (reqFile, respFile string) {
 	return m.reqFile, m.respFile
 }
 
@@ -77,7 +77,8 @@ func TestRecordTransport_RoundTrip(t *testing.T) {
 			}
 
 			sampleReq := func() *http.Request {
-				req, err := http.NewRequest("GET", "http://example.com/", nil)
+				// Replace nil with http.NoBody
+				req, err := http.NewRequest("GET", "http://example.com/", http.NoBody)
 				if err != nil {
 					t.Fatalf("failed to create request: %v", err)
 				}
@@ -99,7 +100,8 @@ func TestRecordTransport_RoundTrip(t *testing.T) {
 			})
 
 			mockRT := &mockRoundTripper{
-				resp: sampleResp(),
+				// Add explanation for nolint directive
+				resp: sampleResp(), //nolint:bodyclose // Response body is closed in the test cleanup
 			}
 
 			rt := recordTransport{
@@ -117,6 +119,7 @@ func TestRecordTransport_RoundTrip(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+			defer gotResp.Body.Close()
 
 			if gotResp.StatusCode != http.StatusOK {
 				t.Errorf("expected status code %d, got %d", http.StatusOK, gotResp.StatusCode)
@@ -157,6 +160,7 @@ func TestRecordTransport_RoundTrip(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error when reading response from file: %v", err)
 			}
+			defer storedResp.Body.Close()
 			if storedResp.StatusCode != http.StatusOK {
 				t.Errorf("expected status code %d, got %d", http.StatusOK, storedResp.StatusCode)
 			}
@@ -185,7 +189,8 @@ func TestRecordTransport_NilBody(t *testing.T) {
 	}
 
 	sampleReq := func() *http.Request {
-		req, err := http.NewRequest("GET", "http://example.com/", nil)
+		// Replace nil with http.NoBody
+		req, err := http.NewRequest("GET", "http://example.com/", http.NoBody)
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
@@ -202,7 +207,8 @@ func TestRecordTransport_NilBody(t *testing.T) {
 	}
 
 	mockRT := &mockRoundTripper{
-		resp: sampleResp(),
+		// Add explanation for nolint directive
+		resp: sampleResp(), //nolint:bodyclose // Response body is closed in the test cleanup
 	}
 
 	rt := recordTransport{
@@ -211,10 +217,11 @@ func TestRecordTransport_NilBody(t *testing.T) {
 		sanitizer:     NoOpRequestSanitizer{},
 	}
 
-	_, err := rt.RoundTrip(sampleReq())
+	resp, err := rt.RoundTrip(sampleReq())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
+	defer resp.Body.Close()
 
 	// Check if the response file was created and contains the expected body
 	respContent, err := os.ReadFile(staticNS.respFile)
