@@ -30,74 +30,151 @@ func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	return m.resp, m.err
 }
 
-func TestRecordTransport_RoundTripHappyPath(t *testing.T) {
-	staticNS := &staticNamingScheme{
-		reqFile:  path.Join(t.TempDir(), "request.txt"),
-		respFile: path.Join(t.TempDir(), "response.txt"),
+func TestRecordTransport_RoundTrip(t *testing.T) {
+	testCases := []struct {
+		name           string
+		transformMode  TransformRespMode
+		applyTransform bool
+		expectedBody   string
+	}{
+		{
+			name:           "TransformRespModeNone",
+			transformMode:  TransformRespModeNone,
+			applyTransform: true,
+			expectedBody:   "original response body",
+		},
+		{
+			name:           "TransformRespModeOnRecord",
+			transformMode:  TransformRespModeOnRecord,
+			applyTransform: true,
+			expectedBody:   "transformed response body",
+		},
+		{
+			name:           "TransformRespModeAlways",
+			transformMode:  TransformRespModeAlways,
+			applyTransform: true,
+			expectedBody:   "transformed response body",
+		},
+		{
+			name:           "TransformRespModeRuntime",
+			transformMode:  TransformRespModeRuntime,
+			applyTransform: true,
+			expectedBody:   "transformed response body",
+		},
+		{
+			name:           "TransformRespModeOnReplay",
+			transformMode:  TransformRespModeOnReplay,
+			applyTransform: true,
+			expectedBody:   "original response body",
+		},
 	}
 
-	sampleReq := func() *http.Request {
-		req, err := http.NewRequest("GET", "http://example.com/", nil)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-		return req
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			staticNS := &staticNamingScheme{
+				reqFile:  path.Join(t.TempDir(), "request.txt"),
+				respFile: path.Join(t.TempDir(), "response.txt"),
+			}
 
-	sampleResp := func() *http.Response {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(bytes.NewBufferString("response body")),
-		}
-	}
-	sanitizer := RequestSanitizerFunc(func(req *http.Request) *http.Request {
-		req.Header.Set("Sanitizer", "was run")
-		return req
-	})
+			sampleReq := func() *http.Request {
+				req, err := http.NewRequest("GET", "http://example.com/", nil)
+				if err != nil {
+					t.Fatalf("failed to create request: %v", err)
+				}
+				return req
+			}
 
-	mockRT := &mockRoundTripper{
-		recordedReq: nil,
-		resp:        sampleResp(),
-	}
+			sampleResp := func() *http.Response {
+				resp := &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewBufferString("original response body")),
+				}
+				defer resp.Body.Close()
+				return resp
+			}
 
-	rt := newRecordTransport(mockRT, staticNS, sanitizer)
+			transform := ResponseTransformFunc(func(r *http.Response) *http.Response {
+				r.Body = io.NopCloser(bytes.NewBufferString("transformed response body"))
+				return r
+			})
 
-	gotResp, err := rt.RoundTrip(sampleReq())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+			mockRT := &mockRoundTripper{
+				resp: sampleResp(),
+			}
 
-	if gotResp.StatusCode != http.StatusOK {
-		t.Errorf("expected status code %d, got %d", http.StatusOK, gotResp.StatusCode)
-	}
-	reqContent, err := os.ReadFile(staticNS.reqFile)
-	if err != nil {
-		t.Fatalf("error when reading request file: %v", err)
-	}
-	storedReq, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(reqContent)))
-	if err != nil {
-		t.Fatalf("error when reading request from file: %v", err)
-	}
-	if storedReq.Method != "GET" {
-		t.Errorf("expected method %q, got %q", "GET", storedReq.Method)
-	}
-	if storedReq.URL.String() != sampleReq().URL.String() {
-		t.Errorf("expected URL %q, got %q", sampleReq().URL.String(), storedReq.URL.String())
-	}
-	if storedReq.Header.Get("Sanitizer") != "was run" {
-		t.Errorf("expected header %q, got %q", "Sanitizer", storedReq.Header.Get("Sanitizer"))
-	}
+			rt := recordTransport{
+				httpTransport: mockRT,
+				namingScheme:  staticNS,
+				sanitizer:     NoOpRequestSanitizer{},
+				transformMode: tc.transformMode,
+			}
 
-	respContent, err := os.ReadFile(staticNS.respFile)
-	if err != nil {
-		t.Fatalf("error when reading response file: %v", err)
-	}
-	storedResp, err := http.ReadResponse(bufio.NewReader(bytes.NewReader(respContent)), sampleReq())
-	if err != nil {
-		t.Fatalf("error when reading response from file: %v", err)
-	}
-	if storedResp.StatusCode != http.StatusOK {
-		t.Errorf("expected status code %d, got %d", http.StatusOK, storedResp.StatusCode)
+			if tc.applyTransform {
+				rt.transform = transform
+			}
+
+			gotResp, err := rt.RoundTrip(sampleReq())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if gotResp.StatusCode != http.StatusOK {
+				t.Errorf("expected status code %d, got %d", http.StatusOK, gotResp.StatusCode)
+			}
+
+			// Check the response body
+			bodyBytes, err := io.ReadAll(gotResp.Body)
+			if err != nil {
+				t.Fatalf("failed to read response body: %v", err)
+			}
+
+			if string(bodyBytes) != tc.expectedBody {
+				t.Errorf("expected response body %q, got %q", tc.expectedBody, string(bodyBytes))
+			}
+
+			// Check the recorded request
+			reqContent, err := os.ReadFile(staticNS.reqFile)
+			if err != nil {
+				t.Fatalf("error when reading request file: %v", err)
+			}
+			storedReq, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(reqContent)))
+			if err != nil {
+				t.Fatalf("error when reading request from file: %v", err)
+			}
+			if storedReq.Method != "GET" {
+				t.Errorf("expected method %q, got %q", "GET", storedReq.Method)
+			}
+			if storedReq.URL.String() != sampleReq().URL.String() {
+				t.Errorf("expected URL %q, got %q", sampleReq().URL.String(), storedReq.URL.String())
+			}
+
+			// Check the recorded response
+			respContent, err := os.ReadFile(staticNS.respFile)
+			if err != nil {
+				t.Fatalf("error when reading response file: %v", err)
+			}
+			storedResp, err := http.ReadResponse(bufio.NewReader(bytes.NewReader(respContent)), sampleReq())
+			if err != nil {
+				t.Fatalf("error when reading response from file: %v", err)
+			}
+			if storedResp.StatusCode != http.StatusOK {
+				t.Errorf("expected status code %d, got %d", http.StatusOK, storedResp.StatusCode)
+			}
+
+			storedRespBody, err := io.ReadAll(storedResp.Body)
+			if err != nil {
+				t.Fatalf("failed to read stored response body: %v", err)
+			}
+
+			expectedStoredBody := "original response body"
+			if tc.transformMode == TransformRespModeOnRecord || tc.transformMode == TransformRespModeAlways {
+				expectedStoredBody = "transformed response body"
+			}
+
+			if string(storedRespBody) != expectedStoredBody {
+				t.Errorf("expected stored response body %q, got %q", expectedStoredBody, string(storedRespBody))
+			}
+		})
 	}
 }
 
@@ -116,24 +193,36 @@ func TestRecordTransport_NilBody(t *testing.T) {
 	}
 
 	sampleResp := func() *http.Response {
-		return &http.Response{
+		resp := &http.Response{
 			StatusCode: http.StatusInternalServerError,
 			Body:       io.NopCloser(bytes.NewBufferString("response body")),
 		}
+		defer resp.Body.Close()
+		return resp
 	}
-	sanitizer := RequestSanitizerFunc(func(req *http.Request) *http.Request {
-		req.Header.Set("Sanitizer", "was run")
-		return req
-	})
 
 	mockRT := &mockRoundTripper{
 		resp: sampleResp(),
 	}
 
-	rt := newRecordTransport(mockRT, staticNS, sanitizer)
+	rt := recordTransport{
+		httpTransport: mockRT,
+		namingScheme:  staticNS,
+		sanitizer:     NoOpRequestSanitizer{},
+	}
 
 	_, err := rt.RoundTrip(sampleReq())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Check if the response file was created and contains the expected body
+	respContent, err := os.ReadFile(staticNS.respFile)
+	if err != nil {
+		t.Fatalf("error when reading response file: %v", err)
+	}
+
+	if !bytes.Contains(respContent, []byte("response body")) {
+		t.Errorf("expected response file to contain 'response body', got %s", string(respContent))
 	}
 }

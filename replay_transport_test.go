@@ -1,6 +1,7 @@
 package hypert
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -59,7 +60,12 @@ func TestReplayTransport_HappyPath(t *testing.T) {
 		sanitizerT.Errorf("this should fail the mocked T")
 	})
 
-	transport := newReplayTransport(mockedT, namingScheme, validator, sanitizer)
+	transport := replayTransport{
+		t:         mockedT,
+		scheme:    namingScheme,
+		validator: validator,
+		sanitizer: sanitizer,
+	}
 	req, err := http.NewRequest("PUT", "https://example.com", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
@@ -104,7 +110,12 @@ func TestReplayTransport_FilesDontExist(t *testing.T) {
 
 	t.Run("should fail with help message if request file doesn't exist", func(t *testing.T) {
 		mockedT := &mockT{}
-		transport := newReplayTransport(mockedT, namingScheme, validator, sanitizer)
+		transport := replayTransport{
+			t:         mockedT,
+			scheme:    namingScheme,
+			validator: validator,
+			sanitizer: sanitizer,
+		}
 
 		_, err := transport.RoundTrip(sampleReq(t))
 		if err == nil {
@@ -120,7 +131,12 @@ func TestReplayTransport_FilesDontExist(t *testing.T) {
 
 	t.Run("should fail with help message if response file doesn't exist", func(t *testing.T) {
 		mockedT := &mockT{}
-		transport := newReplayTransport(mockedT, namingScheme, validator, sanitizer)
+		transport := replayTransport{
+			t:         mockedT,
+			scheme:    namingScheme,
+			validator: validator,
+			sanitizer: sanitizer,
+		}
 		_, err := transport.RoundTrip(sampleReq(t))
 		if err == nil {
 			t.Fatalf("expected error, got nil")
@@ -132,4 +148,93 @@ func TestReplayTransport_FilesDontExist(t *testing.T) {
 			t.Errorf("expected error message to contain helper error message, got %q", err.Error())
 		}
 	})
+}
+
+func TestReplayTransport_TransformModes(t *testing.T) {
+	namingScheme := &staticNamingScheme{
+		reqFile:  "testdata/0.req.http",
+		respFile: "testdata/0.resp.http",
+	}
+
+	sanitizer := NoOpRequestSanitizer{}
+	validator := noopRequestValidator{}
+
+	transform := ResponseTransformFunc(func(r *http.Response) *http.Response {
+		r.Body = io.NopCloser(bytes.NewBufferString("transformed response body"))
+		return r
+	})
+
+	testCases := []struct {
+		name           string
+		transformMode  TransformRespMode
+		expectedBody   string
+		applyTransform bool
+	}{
+		{
+			name:           "TransformRespModeNone",
+			transformMode:  TransformRespModeNone,
+			expectedBody:   "Wassup, world?",
+			applyTransform: true, // Changed to true to test that transform is not applied
+		},
+		{
+			name:           "TransformRespModeOnRecord",
+			transformMode:  TransformRespModeOnRecord,
+			expectedBody:   "Wassup, world?",
+			applyTransform: true, // Changed to true to test that transform is not applied
+		},
+		{
+			name:           "TransformRespModeAlways",
+			transformMode:  TransformRespModeAlways,
+			expectedBody:   "transformed response body",
+			applyTransform: true,
+		},
+		{
+			name:           "TransformRespModeRuntime",
+			transformMode:  TransformRespModeRuntime,
+			expectedBody:   "transformed response body",
+			applyTransform: true,
+		},
+		{
+			name:           "TransformRespModeOnReplay",
+			transformMode:  TransformRespModeOnReplay,
+			expectedBody:   "transformed response body",
+			applyTransform: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedT := &mockT{}
+			transport := replayTransport{
+				t:             mockedT,
+				scheme:        namingScheme,
+				validator:     validator,
+				sanitizer:     sanitizer,
+				transformMode: tc.transformMode,
+			}
+
+			if tc.applyTransform {
+				transport.transform = transform
+			}
+
+			req, err := http.NewRequest("GET", "https://example.com", nil)
+			if err != nil {
+				t.Fatalf("failed to create request: %v", err)
+			}
+
+			resp, err := transport.RoundTrip(req)
+			if err != nil {
+				t.Fatalf("failed to round trip: %v", err)
+			}
+
+			bodyBytes, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("failed to read response body: %v", err)
+			}
+
+			if string(bodyBytes) != tc.expectedBody {
+				t.Errorf("expected response body to be %q, got %q", tc.expectedBody, string(bodyBytes))
+			}
+		})
+	}
 }

@@ -76,7 +76,7 @@ func SchemeValidator() RequestValidator {
 
 // HeadersValidator validates headers of the request.
 // It is not sensitive to the order of headers.
-// User-Agent and Content-Lenght are removed from the comparison, because it is added deeper in the http client call.
+// User-Agent and Content-Length are removed from the comparison, because it is added deeper in the http client call.
 func HeadersValidator() RequestValidator {
 	return RequestValidatorFunc(func(t T, recorded RequestData, got RequestData) {
 		recordedHeaders := recorded.Headers.Clone()
