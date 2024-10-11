@@ -13,7 +13,7 @@ import (
 // that the test data directory should be placed in.
 func DefaultTestDataDir(t T) string {
 	t.Helper()
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 20; i++ {
 		_, file, _, ok := runtime.Caller(i)
 		if !ok {
 			t.Fatalf("failed to get caller")
