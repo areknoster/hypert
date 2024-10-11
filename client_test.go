@@ -13,7 +13,9 @@ func (n noopRequestSanitizer) SanitizeRequest(req *http.Request) *http.Request {
 
 type noopRequestValidator struct{}
 
-func (n noopRequestValidator) Validate(_ T, recorded RequestData, got RequestData) {}
+func (n noopRequestValidator) Validate(_ T, _, _ RequestData) error {
+	return nil
+}
 
 func Test_configWithDefaults(t *testing.T) {
 	t.Run("should return default config", func(t *testing.T) {
@@ -58,7 +60,7 @@ func Test_configWithDefaults(t *testing.T) {
 		if cfg.parentHTTPClient != parentHTTPClient {
 			t.Error("expected parentHTTPClient to be set")
 		}
-		if cfg.requestValidator != validator {
+		if cfg.requestValidator == nil || cfg.requestValidator != validator {
 			t.Error("expected requestValidator to be set")
 		}
 	})

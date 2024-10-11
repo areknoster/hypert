@@ -32,7 +32,10 @@ func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	d.validator.Validate(d.t, recordedReq, requestData)
+	err = d.validator.Validate(d.t, recordedReq, requestData)
+	if err != nil {
+		return nil, fmt.Errorf("request validation failed: %w", err)
+	}
 
 	respFromFile, err := d.readRespFromFile(respFile, req)
 	if err != nil {
@@ -53,7 +56,7 @@ func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 const helpMsgReplayFileDoesntExist = `make sure, to record the request first using recordModeOn parameter in the TestClient.`
 
 func (d *replayTransport) readReqFromFile(name string) (RequestData, error) {
-	f, err := os.OpenFile(name, os.O_RDONLY, 000)
+	f, err := os.OpenFile(name, os.O_RDONLY, 0o000)
 	if errors.Is(err, os.ErrNotExist) {
 		return RequestData{}, fmt.Errorf("file %s does not exist -  %s", name, helpMsgReplayFileDoesntExist)
 	}
@@ -72,7 +75,7 @@ func (d *replayTransport) readReqFromFile(name string) (RequestData, error) {
 }
 
 func (d *replayTransport) readRespFromFile(name string, req *http.Request) (*http.Response, error) {
-	f, err := os.OpenFile(name, os.O_RDONLY, 000)
+	f, err := os.OpenFile(name, os.O_RDONLY, 0o000)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("file %s does not exist -  %s", name, helpMsgReplayFileDoesntExist)
 	}

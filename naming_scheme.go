@@ -40,7 +40,7 @@ type SequentialNamingScheme struct {
 // The directory is created with 0760 permissions if doesn't exists.
 // You can use DefaultTestdataDir function for a sane default directory name.
 func NewSequentialNamingScheme(dir string) (*SequentialNamingScheme, error) {
-	err := os.MkdirAll(dir, 0760)
+	err := os.MkdirAll(dir, 0o760)
 	if err != nil {
 		return nil, fmt.Errorf("error creating directory: %w", err)
 	}

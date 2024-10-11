@@ -7,12 +7,14 @@ import (
 	"testing"
 )
 
-func TestTransformResponseFormatJSON(t *testing.T) {
-	type User struct {
-		Name string `json:"name"`
-		Age  int    `json:"age"`
-	}
+// User represents a user in the system.
+// TODO: This type is currently unused but will be used in future tests.
+type User struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
 
+func TestTransformResponseFormatJSON(t *testing.T) {
 	tests := []struct {
 		name      string
 		body      string
@@ -59,15 +61,17 @@ func TestTransformResponseFormatJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := &http.Response{Body: io.NopCloser(bytes.NewBufferString(tt.body))}
-			tt.transform.TransformResponse(got)
-			bodyBytes, err := io.ReadAll(got.Body)
+			gotTransformed := tt.transform.TransformResponse(got)
+			bodyBytes, err := io.ReadAll(gotTransformed.Body)
 			if err != nil {
 				t.Fatalf("Failed to read response body: %v", err)
 			}
-			got.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			gotTransformed.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			defer gotTransformed.Body.Close()
 			if string(bodyBytes) != tt.want {
 				t.Errorf("Response body = %v, want %v", string(bodyBytes), tt.want)
 			}
+			got.Body.Close()
 		})
 	}
 }

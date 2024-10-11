@@ -68,7 +68,7 @@ func (d *recordTransport) dumpReqToFile(name string, req *http.Request) (*http.R
 	reqClone.Body = io.NopCloser(teeReader)
 	sanitizedReq := d.sanitizer.SanitizeRequest(reqClone)
 
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0o644)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (d *recordTransport) dumpRespToFile(name string, req *http.Request, resp *h
 		return nil, err
 	}
 
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0o644)
 	if err != nil {
 		return nil, fmt.Errorf("open file %s: %w", name, err)
 	}
