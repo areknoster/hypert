@@ -109,7 +109,6 @@ func TestRequestValidators(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			mT := &mockT{}
 			tc.validator.Validate(mT, tc.recorded, tc.got)
 			if tc.expectErr != mT.failed {

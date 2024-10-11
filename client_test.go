@@ -2,50 +2,8 @@ package hypert
 
 import (
 	"net/http"
-	"os"
 	"testing"
 )
-
-import (
-	"path/filepath"
-)
-
-func Test_callerDir(t *testing.T) {
-	callAsIfExternalUser := func() string {
-		// the callstack depth of the package user
-		return func() string {
-			return callerDir()
-		}()
-	}
-	// windows compatibility. It is not handled in the function itself,
-	// because this form is expected by other os.* function that leverage dir name in this package.
-	cd := filepath.ToSlash(callAsIfExternalUser())
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cd != filepath.ToSlash(cwd) {
-		t.Fatalf("expected %s, got %s", cwd, cd)
-	}
-}
-
-func Test_DefaultTestdataDir(t *testing.T) {
-	callAsIfExternalUser := func() string {
-		// the callstack depth of the package user
-		return DefaultTestdataDir(t)
-	}
-	// windows compatibility. It is not handled in the function itself,
-	// because this form is expected by other os.* function that leverage dir name in this package.
-	cd := filepath.ToSlash(callAsIfExternalUser())
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	expectedPath := filepath.Join(cwd, "testdata", t.Name())
-	if cd != filepath.ToSlash(expectedPath) {
-		t.Fatalf("expected %s, got %s", cwd, cd)
-	}
-}
 
 type noopRequestSanitizer struct{}
 
@@ -55,7 +13,7 @@ func (n noopRequestSanitizer) SanitizeRequest(req *http.Request) *http.Request {
 
 type noopRequestValidator struct{}
 
-func (n noopRequestValidator) Validate(t T, recorded RequestData, got RequestData) {}
+func (n noopRequestValidator) Validate(_ T, recorded RequestData, got RequestData) {}
 
 func Test_configWithDefaults(t *testing.T) {
 	t.Run("should return default config", func(t *testing.T) {

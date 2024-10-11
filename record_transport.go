@@ -9,18 +9,19 @@ import (
 	"os"
 )
 
+// NoOpRequestSanitizer is a sanitizer that doesn't modify the request
+type NoOpRequestSanitizer struct{}
+
+func (NoOpRequestSanitizer) SanitizeRequest(req *http.Request) *http.Request {
+	return req
+}
+
 type recordTransport struct {
 	httpTransport http.RoundTripper
 	namingScheme  NamingScheme
 	sanitizer     RequestSanitizer
-}
-
-func newRecordTransport(httpTransport http.RoundTripper, namingScheme NamingScheme, sanitizer RequestSanitizer) *recordTransport {
-	return &recordTransport{
-		httpTransport: httpTransport,
-		namingScheme:  namingScheme,
-		sanitizer:     sanitizer,
-	}
+	transform     ResponseTransform
+	transformMode TransformRespMode
 }
 
 func (d *recordTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -43,9 +44,15 @@ func (d *recordTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+	if d.transformMode == TransformRespModeOnRecord || d.transformMode == TransformRespModeAlways {
+		resp = d.transform.TransformResponse(resp)
+	}
 	resp, err = d.dumpRespToFile(respFile, req, resp)
 	if err != nil {
 		return nil, err
+	}
+	if d.transformMode == TransformRespModeRuntime {
+		resp = d.transform.TransformResponse(resp)
 	}
 
 	return resp, nil

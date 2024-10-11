@@ -11,19 +11,12 @@ import (
 )
 
 type replayTransport struct {
-	t         T
-	scheme    NamingScheme
-	validator RequestValidator
-	sanitizer RequestSanitizer
-}
-
-func newReplayTransport(t T, scheme NamingScheme, validator RequestValidator, sanitizer RequestSanitizer) *replayTransport {
-	return &replayTransport{
-		t:         t,
-		scheme:    scheme,
-		validator: validator,
-		sanitizer: sanitizer,
-	}
+	t             T
+	scheme        NamingScheme
+	validator     RequestValidator
+	sanitizer     RequestSanitizer
+	transform     ResponseTransform
+	transformMode TransformRespMode
 }
 
 func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -45,6 +38,15 @@ func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Apply transformation based on the transform mode
+	if d.transform != nil {
+		switch d.transformMode {
+		case TransformRespModeAlways, TransformRespModeRuntime, TransformRespModeOnReplay:
+			respFromFile = d.transform.TransformResponse(respFromFile)
+		}
+	}
+
 	return respFromFile, nil
 }
 

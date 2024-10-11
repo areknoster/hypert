@@ -2,13 +2,12 @@ package hypert
 
 import (
 	"net/http"
-	"path"
-	"runtime"
-	"testing"
 )
 
 type config struct {
 	isRecordMode     bool
+	transformMode    TransformRespMode
+	transform        ResponseTransform
 	namingScheme     NamingScheme
 	requestSanitizer RequestSanitizer
 	requestValidator RequestValidator
@@ -50,19 +49,32 @@ func WithRequestValidator(v RequestValidator) Option {
 	}
 }
 
-// returns caller directory, assuming the caller is 2 levels up
-func callerDir() string {
-	_, filePath, _, _ := runtime.Caller(3)
-	return path.Dir(filePath)
-}
+type TransformRespMode int
 
-// DefaultTestdataDir returns fully qualified directory name following <your package directory>/testdata/<name of the test> convention.
-//
-// Note, that it relies on runtime.Caller function with given skip stack number.
-// Because of that, usually you'd want to call this function directly in a file that belongs to a directory
-// that the test data directory should be placed in.
-func DefaultTestdataDir(t *testing.T) string {
-	return path.Join(callerDir(), "testdata", t.Name())
+const (
+	// TransformRespModeNone. No transformations are applied to the response. Default value.
+	TransformRespModeNone TransformRespMode = iota
+	// TransformRespModeOnRecord will apply transform only in record mode, so the transformed response would be visible in stored files.
+	// In replay mode, whatever is stored in the file will be used, without any transformations.
+	TransformRespModeOnRecord
+	// TransformRespModeAlways will apply transformation to the response in both record and replay modes.
+	// When in replay mode, the file is not modified, so the response is not transformed.
+	TransformRespModeAlways
+	// TransformModeRuntime will apply transformation only in runtime. This means, that the files would always contain untransformed responses,
+	// but the response will be transformed on the fly during the test execution.
+	TransformRespModeRuntime
+
+	// TransformRespModeOnReplay will apply transformation only in replay mode.
+	// This is useful when there is some other action (e.g. oauth flow) that needs to be performed in record mode,
+	// but then the response is not feasible in replay mode. (e.g. we want to override the redirect url in oauth responses)
+	TransformRespModeOnReplay
+)
+
+func WithResponseTransform(mode TransformRespMode, transform ResponseTransform) Option {
+	return func(cfg *config) {
+		cfg.transformMode = mode
+		cfg.transform = transform
+	}
 }
 
 // TestClient returns a new http.Client that will either dump requests to the given dir or read them from it.
@@ -86,10 +98,23 @@ func TestClient(t T, recordModeOn bool, opts ...Option) *http.Client {
 	var transport http.RoundTripper
 	if cfg.isRecordMode {
 		t.Log("hypert: record request mode - requests will be stored")
-		transport = newRecordTransport(cfg.parentHTTPClient.Transport, cfg.namingScheme, cfg.requestSanitizer)
+		transport = &recordTransport{
+			httpTransport: cfg.parentHTTPClient.Transport,
+			namingScheme:  cfg.namingScheme,
+			sanitizer:     cfg.requestSanitizer,
+			transformMode: cfg.transformMode,
+			transform:     cfg.transform,
+		}
 	} else {
 		t.Log("hypert: replay request mode - requests will be read from previously stored files.")
-		transport = newReplayTransport(t, cfg.namingScheme, cfg.requestValidator, cfg.requestSanitizer)
+		transport = &replayTransport{
+			t:             t,
+			scheme:        cfg.namingScheme,
+			validator:     cfg.requestValidator,
+			sanitizer:     cfg.requestSanitizer,
+			transform:     cfg.transform,
+			transformMode: cfg.transformMode,
+		}
 	}
 	cfg.parentHTTPClient.Transport = transport
 	return cfg.parentHTTPClient
@@ -103,7 +128,7 @@ func configWithDefaults(t T, recordModeOn bool, opts []Option) *config {
 		opt(cfg)
 	}
 	if cfg.namingScheme == nil {
-		requestsDir := path.Join(callerDir(), "testdata", t.Name())
+		requestsDir := DefaultTestDataDir(t)
 		t.Logf("hypert: using sequential naming scheme in %s directory", requestsDir)
 		scheme, err := NewSequentialNamingScheme(requestsDir)
 		if err != nil {
