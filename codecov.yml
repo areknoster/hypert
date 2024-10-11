@@ -2,6 +2,5 @@ coverage:
   status:
     project:
       default:
-        target: auto
-        threshold: "2%"
+        target: "75%"
         paths: "!examples/"
