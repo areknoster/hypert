@@ -17,7 +17,10 @@ func TestNewComposedRequestSanitizer(t *testing.T) {
 		}),
 	)
 
-	req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
+	req, err := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 	req = s.SanitizeRequest(req)
 	if req.Header.Get("X-Request-Sanitizer-Test1") != "1" {
 		t.Errorf("expected 1, got %s", req.Header.Get("X-Request-Sanitizer-Test1"))
@@ -31,7 +34,10 @@ func TestHeadersSanitizer(t *testing.T) {
 	const testedHeader = "X-Request-Headers-Sanitizer"
 	s := HeadersSanitizer(testedHeader)
 
-	req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
+	req, err := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 	req.Header.Set(testedHeader, "1")
 
 	originalHeadersCount := len(req.Header)
@@ -47,7 +53,10 @@ func TestHeadersSanitizer(t *testing.T) {
 func TestQueryParamsSanitizer(t *testing.T) {
 	s := SanitizerQueryParams("param1", "param2")
 
-	req, _ := http.NewRequest("GET", "http://example.com?param1=1&param2=2&param3=3", http.NoBody)
+	req, err := http.NewRequest(http.MethodGet, "http://example.com?param1=1&param2=2&param3=3", http.NoBody)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 	sanitizedReq := s.SanitizeRequest(req)
 	if sanitizedReq.URL.RawQuery != "param1=SANITIZED&param2=SANITIZED&param3=3" {
 		t.Errorf("expected param1=SANITIZED&param2=SANITIZED, got %s", sanitizedReq.URL.RawQuery)

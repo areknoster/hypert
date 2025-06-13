@@ -1,9 +1,11 @@
 package hypert
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"sync"
 )
@@ -63,4 +65,94 @@ func (s *SequentialNamingScheme) FileNames(_ RequestData) (reqFile, respFile str
 	}
 
 	return withDir(requestIndex + ".req.http"), withDir(requestIndex + ".resp.http")
+}
+
+// PathBasedNamingScheme creates filenames based on the request path
+type PathBasedNamingScheme struct {
+	dir     string
+	mu      sync.Mutex
+	counter map[string]int
+}
+
+// FileNames returns filenames based on the request path
+func (s *PathBasedNamingScheme) FileNames(data RequestData) (reqFile, respFile string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.counter == nil {
+		s.counter = make(map[string]int)
+	}
+
+	// Get full URL including query parameters
+	fullURL := data.URL.String()
+
+	// Create a hash of the full URL
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(fullURL)))
+
+	// Add counter if this URL has been seen before
+	count := s.counter[fullURL]
+	s.counter[fullURL]++
+
+	filename := hash[:16] // Use first 16 characters of hash for uniqueness
+	if count > 0 {
+		filename = fmt.Sprintf("%s-%d", filename, count)
+	}
+
+	return filepath.Join(s.dir, filename+".req.http"), filepath.Join(s.dir, filename+".resp.http")
+}
+
+// NewPathBasedNamingScheme creates a new PathBasedNamingScheme
+func NewPathBasedNamingScheme(dir string) (*PathBasedNamingScheme, error) {
+	err := os.MkdirAll(dir, 0o760)
+	if err != nil {
+		return nil, fmt.Errorf("error creating directory: %w", err)
+	}
+
+	return &PathBasedNamingScheme{
+		dir: dir,
+	}, nil
+}
+
+// ContentHashNamingScheme creates filenames based on the request path and content hash
+type ContentHashNamingScheme struct {
+	dir string
+}
+
+// FileNames returns filenames based on the request path and content hash
+func (s *ContentHashNamingScheme) FileNames(data RequestData) (reqFile, respFile string) {
+	// Get path from URL and sanitize it for filename use
+	path := "root"
+	if data.URL != nil {
+		path = data.URL.Path
+		if path == "" {
+			path = "root"
+		}
+	}
+
+	// Create a hash of path and content
+	content := data.BodyBytes
+	if content == nil {
+		content = []byte{}
+	}
+
+	// Combine path and content for hashing
+	hashInput := append([]byte(path), content...)
+	hash := fmt.Sprintf("%x", sha256.Sum256(hashInput))
+
+	// Use first 16 characters of hash for uniqueness
+	filename := hash[:16]
+
+	return filepath.Join(s.dir, filename+".req.http"), filepath.Join(s.dir, filename+".resp.http")
+}
+
+// NewContentHashNamingScheme creates a new ContentHashNamingScheme
+func NewContentHashNamingScheme(dir string) (*ContentHashNamingScheme, error) {
+	err := os.MkdirAll(dir, 0o760)
+	if err != nil {
+		return nil, fmt.Errorf("error creating directory: %w", err)
+	}
+
+	return &ContentHashNamingScheme{
+		dir: dir,
+	}, nil
 }

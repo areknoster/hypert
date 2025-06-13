@@ -81,7 +81,7 @@ func SanitizerQueryParams(params ...string) RequestSanitizer {
 	})
 }
 
-// DefaultQueryParamsSanitizer is SanitizerQueryParams with with the most common query params that should be sanitized in most cases.
+// DefaultQueryParamsSanitizer is SanitizerQueryParams with the most common query params that should be sanitized in most cases.
 func DefaultQueryParamsSanitizer() RequestSanitizer {
 	return SanitizerQueryParams(
 		"access_token",

@@ -40,8 +40,8 @@ func TestReplayTransport_HappyPath(t *testing.T) {
 	})
 	mockedT := &mockT{}
 	validator := RequestValidatorFunc(func(sanitizerT T, recorded RequestData, got RequestData) error {
-		if recorded.Method != "GET" {
-			t.Errorf("expected read from file method to be GET, got %s", recorded.Method)
+		if recorded.Method != http.MethodGet {
+			t.Errorf("expected method GET, got %s", recorded.Method)
 		}
 		if recorded.URL.String() != reqURL {
 			t.Errorf("expected URL read from file to be %s, got %s", reqURL, recorded.URL.String())
@@ -53,7 +53,7 @@ func TestReplayTransport_HappyPath(t *testing.T) {
 		if got.Headers.Get("Sanitizer") != "was run" {
 			t.Errorf("expected Sanitizer header to be set in the request passed to the validator")
 		}
-		if got.Method != "PUT" {
+		if got.Method != http.MethodPut {
 			t.Errorf("expected method to be PUT, got %s", got.Method)
 		}
 
@@ -67,7 +67,7 @@ func TestReplayTransport_HappyPath(t *testing.T) {
 		validator: validator,
 		sanitizer: sanitizer,
 	}
-	req, err := http.NewRequest("PUT", "https://example.com", http.NoBody)
+	req, err := http.NewRequest(http.MethodPut, "https://example.com", http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -77,8 +77,8 @@ func TestReplayTransport_HappyPath(t *testing.T) {
 		t.Fatalf("failed to round trip: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.Header.Get("SampleRespHeader") != "SampleRespHeaderValue" {
-		t.Fatalf("expected SampleRespHeader to be set")
+	if resp.Header.Get("Samplerespheader") != "SampleRespHeaderValue" {
+		t.Fatalf("expected Samplerespheader to be set")
 	}
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected status code to be 200, got %d", resp.StatusCode)
@@ -106,7 +106,7 @@ func TestReplayTransport_FilesDontExist(t *testing.T) {
 		return nil
 	})
 	sampleReq := func(t *testing.T) *http.Request {
-		req, err := http.NewRequest("PUT", "https://example.com", http.NoBody)
+		req, err := http.NewRequest(http.MethodPut, "https://example.com", http.NoBody)
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
@@ -230,7 +230,7 @@ func TestReplayTransport_TransformModes(t *testing.T) {
 				transport.transform = transform
 			}
 
-			req, err := http.NewRequest("GET", "https://example.com", http.NoBody)
+			req, err := http.NewRequest(http.MethodGet, "https://example.com", http.NoBody)
 			if err != nil {
 				t.Fatalf("failed to create request: %v", err)
 			}

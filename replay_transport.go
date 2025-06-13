@@ -47,6 +47,8 @@ func (d *replayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		switch d.transformMode {
 		case TransformRespModeAlways, TransformRespModeRuntime, TransformRespModeOnReplay:
 			respFromFile = d.transform.TransformResponse(respFromFile)
+		case TransformRespModeNone, TransformRespModeOnRecord:
+			// No transformation applied during replay for these modes
 		}
 	}
 
