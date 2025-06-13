@@ -20,13 +20,11 @@ func (m *staticNamingScheme) FileNames(_ RequestData) (reqFile, respFile string)
 }
 
 type mockRoundTripper struct {
-	recordedReq *http.Request
-	resp        *http.Response
-	err         error
+	resp *http.Response
+	err  error
 }
 
 func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	m.recordedReq = req
 	return m.resp, m.err
 }
 
@@ -78,7 +76,7 @@ func TestRecordTransport_RoundTrip(t *testing.T) {
 
 			sampleReq := func() *http.Request {
 				// Replace nil with http.NoBody
-				req, err := http.NewRequest("GET", "http://example.com/", http.NoBody)
+				req, err := http.NewRequest(http.MethodGet, "http://example.com/", http.NoBody)
 				if err != nil {
 					t.Fatalf("failed to create request: %v", err)
 				}
@@ -144,8 +142,8 @@ func TestRecordTransport_RoundTrip(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error when reading request from file: %v", err)
 			}
-			if storedReq.Method != "GET" {
-				t.Errorf("expected method %q, got %q", "GET", storedReq.Method)
+			if storedReq.Method != http.MethodGet {
+				t.Errorf("expected method %q, got %q", http.MethodGet, storedReq.Method)
 			}
 			if storedReq.URL.String() != sampleReq().URL.String() {
 				t.Errorf("expected URL %q, got %q", sampleReq().URL.String(), storedReq.URL.String())
@@ -190,7 +188,7 @@ func TestRecordTransport_NilBody(t *testing.T) {
 
 	sampleReq := func() *http.Request {
 		// Replace nil with http.NoBody
-		req, err := http.NewRequest("GET", "http://example.com/", http.NoBody)
+		req, err := http.NewRequest(http.MethodGet, "http://example.com/", http.NoBody)
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
