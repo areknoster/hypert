@@ -1,6 +1,7 @@
 package hypert
 
 import (
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -439,6 +440,299 @@ func TestContentHashNamingScheme_EdgeCases(t *testing.T) {
 
 			if !strings.HasSuffix(req, ".req.http") || !strings.HasSuffix(resp, ".resp.http") {
 				t.Error("FileNames should return files with correct extensions")
+			}
+		})
+	}
+}
+
+func TestContentHashNamingScheme_MultipartBoundaryNormalization(t *testing.T) {
+	dir := t.TempDir()
+	scheme, err := NewContentHashNamingScheme(dir)
+	if err != nil {
+		t.Fatalf("Error creating ContentHashNamingScheme: %v", err)
+	}
+
+	// Create two multipart bodies with different boundaries but same content
+	boundary1 := "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+	boundary2 := "----WebKitFormBoundaryABC123XYZ789DEF"
+
+	// Same form data content
+	formContent := `Content-Disposition: form-data; name="field1"
+
+value1
+------
+Content-Disposition: form-data; name="field2"
+
+value2
+------`
+
+	body1 := []byte("--" + boundary1 + "\r\n" + formContent + boundary1 + "--\r\n")
+	body2 := []byte("--" + boundary2 + "\r\n" + formContent + boundary2 + "--\r\n")
+
+	u, err := url.Parse("https://example.com/upload")
+	if err != nil {
+		t.Fatalf("failed to parse URL: %v", err)
+	}
+
+	// Create headers with different boundaries
+	headers1 := http.Header{}
+	headers1.Set("Content-Type", "multipart/form-data; boundary="+boundary1)
+
+	headers2 := http.Header{}
+	headers2.Set("Content-Type", "multipart/form-data; boundary="+boundary2)
+
+	data1 := RequestData{
+		URL:       u,
+		Headers:   headers1,
+		BodyBytes: body1,
+	}
+
+	data2 := RequestData{
+		URL:       u,
+		Headers:   headers2,
+		BodyBytes: body2,
+	}
+
+	// Get filenames for both requests
+	req1, resp1 := scheme.FileNames(data1)
+	req2, resp2 := scheme.FileNames(data2)
+
+	// They should be identical since the functional content is the same
+	if req1 != req2 {
+		t.Errorf("Expected same request filenames for different boundaries, got %s and %s", req1, req2)
+	}
+	if resp1 != resp2 {
+		t.Errorf("Expected same response filenames for different boundaries, got %s and %s", resp1, resp2)
+	}
+}
+
+func TestContentHashNamingScheme_MultipartBoundaryDifferentContent(t *testing.T) {
+	dir := t.TempDir()
+	scheme, err := NewContentHashNamingScheme(dir)
+	if err != nil {
+		t.Fatalf("Error creating ContentHashNamingScheme: %v", err)
+	}
+
+	boundary := "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+
+	body1 := []byte("--" + boundary + "\r\n" +
+		"Content-Disposition: form-data; name=\"field1\"\r\n\r\n" +
+		"value1\r\n" +
+		"--" + boundary + "--\r\n")
+
+	body2 := []byte("--" + boundary + "\r\n" +
+		"Content-Disposition: form-data; name=\"field1\"\r\n\r\n" +
+		"value2\r\n" +
+		"--" + boundary + "--\r\n")
+
+	u, err := url.Parse("https://example.com/upload")
+	if err != nil {
+		t.Fatalf("failed to parse URL: %v", err)
+	}
+
+	headers := http.Header{}
+	headers.Set("Content-Type", "multipart/form-data; boundary="+boundary)
+
+	data1 := RequestData{
+		URL:       u,
+		Headers:   headers,
+		BodyBytes: body1,
+	}
+
+	data2 := RequestData{
+		URL:       u,
+		Headers:   headers.Clone(),
+		BodyBytes: body2,
+	}
+
+	// Get filenames for both requests
+	req1, resp1 := scheme.FileNames(data1)
+	req2, resp2 := scheme.FileNames(data2)
+
+	// They should be different since the content is different
+	if req1 == req2 {
+		t.Error("Expected different request filenames for different content")
+	}
+	if resp1 == resp2 {
+		t.Error("Expected different response filenames for different content")
+	}
+}
+
+func TestContentHashNamingScheme_NonMultipartUnaffected(t *testing.T) {
+	dir := t.TempDir()
+	scheme, err := NewContentHashNamingScheme(dir)
+	if err != nil {
+		t.Fatalf("Error creating ContentHashNamingScheme: %v", err)
+	}
+
+	u, err := url.Parse("https://example.com/api")
+	if err != nil {
+		t.Fatalf("failed to parse URL: %v", err)
+	}
+
+	body := []byte(`{"key": "value"}`)
+
+	headers := http.Header{}
+	headers.Set("Content-Type", "application/json")
+
+	data := RequestData{
+		URL:       u,
+		Headers:   headers,
+		BodyBytes: body,
+	}
+
+	// Get filenames multiple times
+	req1, resp1 := scheme.FileNames(data)
+	req2, resp2 := scheme.FileNames(data)
+
+	// Should be identical for non-multipart requests
+	if req1 != req2 || resp1 != resp2 {
+		t.Error("Non-multipart requests should generate identical filenames")
+	}
+}
+
+func TestNormalizeMultipartBody(t *testing.T) {
+	tests := []struct {
+		name            string
+		body            []byte
+		contentType     string
+		shouldNormalize bool
+	}{
+		{
+			name:            "multipart_form_data_with_boundary",
+			body:            []byte("--boundary123\r\nContent\r\n--boundary123--"),
+			contentType:     "multipart/form-data; boundary=boundary123",
+			shouldNormalize: true,
+		},
+		{
+			name:            "multipart_mixed_with_boundary",
+			body:            []byte("--boundary456\r\nContent\r\n--boundary456--"),
+			contentType:     "multipart/mixed; boundary=boundary456",
+			shouldNormalize: true,
+		},
+		{
+			name:            "multipart_related_with_boundary",
+			body:            []byte("--boundary789\r\nContent\r\n--boundary789--"),
+			contentType:     "multipart/related; boundary=boundary789",
+			shouldNormalize: true,
+		},
+		{
+			name:            "multipart_alternative_with_boundary",
+			body:            []byte("--boundaryABC\r\nContent\r\n--boundaryABC--"),
+			contentType:     "multipart/alternative; boundary=boundaryABC",
+			shouldNormalize: true,
+		},
+		{
+			name:            "multipart_digest_with_boundary",
+			body:            []byte("--boundaryDEF\r\nContent\r\n--boundaryDEF--"),
+			contentType:     "multipart/digest; boundary=boundaryDEF",
+			shouldNormalize: true,
+		},
+		{
+			name:            "non_multipart",
+			body:            []byte(`{"key": "value"}`),
+			contentType:     "application/json",
+			shouldNormalize: false,
+		},
+		{
+			name:            "empty_content_type",
+			body:            []byte("some content"),
+			contentType:     "",
+			shouldNormalize: false,
+		},
+		{
+			name:            "multipart_without_boundary",
+			body:            []byte("content"),
+			contentType:     "multipart/form-data",
+			shouldNormalize: false,
+		},
+		{
+			name:            "invalid_content_type",
+			body:            []byte("content"),
+			contentType:     "invalid;;;content-type",
+			shouldNormalize: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := normalizeMultipartBody(tt.body, tt.contentType)
+
+			if tt.shouldNormalize {
+				// The result should be different from the original
+				if string(result) == string(tt.body) {
+					t.Error("Expected body to be normalized, but it wasn't changed")
+				}
+				// Should contain the normalized boundary
+				if !strings.Contains(string(result), "NORMALIZED_BOUNDARY") {
+					t.Error("Expected normalized body to contain NORMALIZED_BOUNDARY")
+				}
+			} else {
+				// The result should be identical to the original
+				if string(result) != string(tt.body) {
+					t.Error("Expected body to remain unchanged for non-multipart content")
+				}
+			}
+		})
+	}
+}
+
+func TestContentHashNamingScheme_VariousMultipartTypes(t *testing.T) {
+	dir := t.TempDir()
+	scheme, err := NewContentHashNamingScheme(dir)
+	if err != nil {
+		t.Fatalf("Error creating ContentHashNamingScheme: %v", err)
+	}
+
+	multipartTypes := []string{
+		"multipart/form-data",
+		"multipart/mixed",
+		"multipart/related",
+		"multipart/alternative",
+		"multipart/digest",
+	}
+
+	// Test that same content with different boundaries but same multipart type produces same hash
+	for _, mType := range multipartTypes {
+		t.Run(mType, func(t *testing.T) {
+			boundary1 := "----Boundary1234567890"
+			boundary2 := "----BoundaryABCDEFGHIJ"
+
+			content := "Content-Disposition: form-data; name=\"test\"\r\n\r\nvalue\r\n"
+			body1 := []byte("--" + boundary1 + "\r\n" + content + "--" + boundary1 + "--\r\n")
+			body2 := []byte("--" + boundary2 + "\r\n" + content + "--" + boundary2 + "--\r\n")
+
+			u, err := url.Parse("https://example.com/upload")
+			if err != nil {
+				t.Fatalf("failed to parse URL: %v", err)
+			}
+
+			headers1 := http.Header{}
+			headers1.Set("Content-Type", mType+"; boundary="+boundary1)
+
+			headers2 := http.Header{}
+			headers2.Set("Content-Type", mType+"; boundary="+boundary2)
+
+			data1 := RequestData{
+				URL:       u,
+				Headers:   headers1,
+				BodyBytes: body1,
+			}
+
+			data2 := RequestData{
+				URL:       u,
+				Headers:   headers2,
+				BodyBytes: body2,
+			}
+
+			req1, resp1 := scheme.FileNames(data1)
+			req2, resp2 := scheme.FileNames(data2)
+
+			if req1 != req2 {
+				t.Errorf("Expected same request filenames for %s with different boundaries, got %s and %s", mType, req1, req2)
+			}
+			if resp1 != resp2 {
+				t.Errorf("Expected same response filenames for %s with different boundaries, got %s and %s", mType, resp1, resp2)
 			}
 		})
 	}
