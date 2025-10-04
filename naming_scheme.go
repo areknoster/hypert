@@ -1,8 +1,10 @@
 package hypert
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"mime"
 	"os"
 	"path"
 	"path/filepath"
@@ -118,6 +120,39 @@ type ContentHashNamingScheme struct {
 	dir string
 }
 
+// normalizeMultipartBody normalizes multipart bodies by replacing the
+// boundary string with a fixed value, ensuring stable hashing across requests
+// with different boundaries. This handles all multipart types (form-data, mixed,
+// related, alternative, etc.).
+func normalizeMultipartBody(bodyBytes []byte, contentType string) []byte {
+	if contentType == "" {
+		return bodyBytes
+	}
+
+	// Parse the Content-Type header to check if it's multipart
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return bodyBytes
+	}
+
+	// Only normalize if it's any multipart type
+	if len(mediaType) < 10 || mediaType[:10] != "multipart/" {
+		return bodyBytes
+	}
+
+	// Get the boundary parameter
+	boundary, ok := params["boundary"]
+	if !ok || boundary == "" {
+		return bodyBytes
+	}
+
+	// Replace all occurrences of the boundary with a normalized value
+	normalizedBoundary := []byte("NORMALIZED_BOUNDARY")
+	oldBoundary := []byte(boundary)
+
+	return bytes.ReplaceAll(bodyBytes, oldBoundary, normalizedBoundary)
+}
+
 // FileNames returns filenames based on the request path and content hash
 func (s *ContentHashNamingScheme) FileNames(data RequestData) (reqFile, respFile string) {
 	// Get path from URL and sanitize it for filename use
@@ -134,6 +169,10 @@ func (s *ContentHashNamingScheme) FileNames(data RequestData) (reqFile, respFile
 	if content == nil {
 		content = []byte{}
 	}
+
+	// Normalize multipart boundaries if present
+	contentType := data.Headers.Get("Content-Type")
+	content = normalizeMultipartBody(content, contentType)
 
 	// Combine path and content for hashing
 	hashInput := append([]byte(path), content...)
