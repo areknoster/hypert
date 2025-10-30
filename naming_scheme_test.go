@@ -591,6 +591,67 @@ func TestContentHashNamingScheme_NonMultipartUnaffected(t *testing.T) {
 	}
 }
 
+func TestContentHashNamingScheme_JSONCompaction(t *testing.T) {
+    dir := t.TempDir()
+    scheme, err := NewContentHashNamingScheme(dir)
+    if err != nil {
+        t.Fatalf("Error creating ContentHashNamingScheme: %v", err)
+    }
+
+    u, err := url.Parse("https://example.com/api/json")
+    if err != nil {
+        t.Fatalf("failed to parse URL: %v", err)
+    }
+
+    // Logically identical JSON bodies with different spacing
+    jsonCompact := []byte(`{"a":1,"b":[1,2],"msg":"hello"}`)
+    jsonSpaced := []byte(`{  "a" : 1 ,  "b" : [1, 2] , "msg" : "hello" }`)
+
+    headers := http.Header{}
+    headers.Set("Content-Type", "application/json")
+
+    data1 := RequestData{URL: u, Headers: headers, BodyBytes: jsonCompact}
+    data2 := RequestData{URL: u, Headers: headers.Clone(), BodyBytes: jsonSpaced}
+
+    req1, resp1 := scheme.FileNames(data1)
+    req2, resp2 := scheme.FileNames(data2)
+
+    if req1 != req2 || resp1 != resp2 {
+        t.Errorf("Expected identical filenames for JSON bodies differing only in whitespace. got req: %s vs %s, resp: %s vs %s", req1, req2, resp1, resp2)
+    }
+}
+
+func TestContentHashNamingScheme_JSONCompactionOnlyForJSON(t *testing.T) {
+    dir := t.TempDir()
+    scheme, err := NewContentHashNamingScheme(dir)
+    if err != nil {
+        t.Fatalf("Error creating ContentHashNamingScheme: %v", err)
+    }
+
+    u, err := url.Parse("https://example.com/api/text")
+    if err != nil {
+        t.Fatalf("failed to parse URL: %v", err)
+    }
+
+    // Same logical content but with different spacing; since content-type is not JSON,
+    // filenames should differ (no compaction should be applied).
+    body1 := []byte(`{  "a" : 1 }`)
+    body2 := []byte(`{"a":1}`)
+
+    headers := http.Header{}
+    headers.Set("Content-Type", "text/plain")
+
+    data1 := RequestData{URL: u, Headers: headers, BodyBytes: body1}
+    data2 := RequestData{URL: u, Headers: headers.Clone(), BodyBytes: body2}
+
+    req1, resp1 := scheme.FileNames(data1)
+    req2, resp2 := scheme.FileNames(data2)
+
+    if req1 == req2 || resp1 == resp2 {
+        t.Errorf("Expected different filenames for non-JSON content with different bytes")
+    }
+}
+
 func TestNormalizeMultipartBody(t *testing.T) {
 	tests := []struct {
 		name            string

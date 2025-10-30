@@ -3,6 +3,7 @@ package hypert
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"mime"
 	"os"
@@ -153,6 +154,25 @@ func normalizeMultipartBody(bodyBytes []byte, contentType string) []byte {
 	return bytes.ReplaceAll(bodyBytes, oldBoundary, normalizedBoundary)
 }
 
+// compactJSONBody removes insignificant whitespace from JSON payloads to ensure
+// stable hashing across logically identical requests that differ only in spacing.
+func compactJSONBody(bodyBytes []byte, contentType string) []byte {
+	if contentType == "" {
+		return bodyBytes
+	}
+
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil || mediaType != "application/json" {
+		return bodyBytes
+	}
+
+	var compacted bytes.Buffer
+	if err := json.Compact(&compacted, bodyBytes); err != nil {
+		return bodyBytes
+	}
+	return compacted.Bytes()
+}
+
 // FileNames returns filenames based on the request path and content hash
 func (s *ContentHashNamingScheme) FileNames(data RequestData) (reqFile, respFile string) {
 	// Get path from URL and sanitize it for filename use
@@ -170,9 +190,10 @@ func (s *ContentHashNamingScheme) FileNames(data RequestData) (reqFile, respFile
 		content = []byte{}
 	}
 
-	// Normalize multipart boundaries if present
+	// Normalize multipart boundaries if present and compact JSON bodies
 	contentType := data.Headers.Get("Content-Type")
 	content = normalizeMultipartBody(content, contentType)
+	content = compactJSONBody(content, contentType)
 
 	// Combine path and content for hashing
 	hashInput := append([]byte(path), content...)
