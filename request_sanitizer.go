@@ -1,6 +1,10 @@
 package hypert
 
-import "net/http"
+import (
+	"io"
+	"net/http"
+	"strings"
+)
 
 // RequestSanitizer ensures, that no sensitive data is written to the request records.
 // The sanitized version would be stored, whilst the original one would be sent in the record mode.
@@ -96,6 +100,68 @@ func DefaultQueryParamsSanitizer() RequestSanitizer {
 		"client_id",
 		"signature",
 		"sig",
+		"session",
+	)
+}
+
+// FormBodySanitizer sanitizes listed form fields in the request body for application/x-www-form-urlencoded content type.
+// Lookup DefaultFormBodySanitizer for a default value.
+func FormBodySanitizer(fields ...string) RequestSanitizer {
+	fieldSet := make(map[string]bool)
+	for _, field := range fields {
+		fieldSet[field] = true
+	}
+
+	return RequestSanitizerFunc(func(req *http.Request) *http.Request {
+		contentType := req.Header.Get("Content-Type")
+		if !strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+			return req
+		}
+
+		if req.Body == nil {
+			return req
+		}
+
+		// Parse form from URL-encoded body
+		// Note: req.Body is a TeeReader in hypert's flow, so we can read it here
+		err := req.ParseForm()
+		if err != nil {
+			return req
+		}
+
+		// Sanitize specified fields
+		modified := false
+		for key := range req.PostForm {
+			if fieldSet[key] {
+				req.PostForm.Set(key, "SANITIZED")
+				modified = true
+			}
+		}
+
+		// Reconstruct body if modified
+		if modified {
+			body := req.PostForm.Encode()
+			req.Body = io.NopCloser(strings.NewReader(body))
+			req.ContentLength = int64(len(body))
+		}
+
+		return req
+	})
+}
+
+// DefaultFormBodySanitizer is FormBodySanitizer with the most common form fields that should be sanitized in most cases.
+func DefaultFormBodySanitizer() RequestSanitizer {
+	return FormBodySanitizer(
+		"code", // OAuth authorization code
+		"access_token",
+		"refresh_token",
+		"password",
+		"secret",
+		"client_secret",
+		"client_id",
+		"token",
+		"api_key",
+		"auth_token",
 		"session",
 	)
 }
